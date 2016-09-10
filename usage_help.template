@@ -1,0 +1,30 @@
+{%- if command.description %}{{ command.description }}{% endif -%}
+Usage:{% if command.usages|length == 1 %}  {{command.cli_command}} {{command.usages[0].string_repr}}{% else %}
+{%- for usage in command.usages %}
+  {{command.cli_command}} {{usage.string_repr}}
+{%- endfor %}
+{%- endif %}
+{%- if command.parameters %}
+
+Parameters:
+{{command|parameters_usage_help(long)}}
+{%- endif %}
+{%- if command.sub_commands %}
+
+Sub Commands:
+{{command|subcommands_usage_help(common_subcommand_help, parents)}}
+{%- endif %}
+{%- if long and command.help %}
+
+{{command.help}}
+{%- endif %}
+{%- if command.help_params %}
+
+For short help type: {{command_str}} {{command.help_params[0]}}{% if command.help_params|length > 1 and long %} (other help parameters: {{command.help_params[1:]}}){% endif %}.
+	{%- if command.long_help_params %}
+For more detailed help type: {{command_str}} {{command.help_params[0]}} {{command.long_help_params[0]}}{% if command.long_help_params|length > 1 and long %} (other detailed help parameters: {{command.long_help_params[1:]}}){% endif %}.
+	{%- endif %}
+	{%- if command.resolved_commands and common_subcommand_help %}
+For help about a speciffic sub command type: {{command_str}} <sub_command> {{common_subcommand_help}}.
+	{%- endif %}
+{%- endif %}

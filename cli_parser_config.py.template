@@ -1,0 +1,100 @@
+
+{%- macro cli_element(element) -%}
+{%- if element|element_type == 'CliOrGroup' %}
+OrGroup([
+	{%- for or_el in element.elements %}
+		{{- cli_element(or_el)|tab_indent }},
+	{%- endfor %}
+])
+{%- elif element|element_type == 'CodeBlock' %}
+	{{- raise("Cannot create a parser for a codeblock in the command usage pattern.") }}
+{%- elif element|element_type == 'CliGroup' %}
+ParameterGroup([
+	{%- for el in element.elements %}
+		{{- cli_element(el)|tab_indent }},
+	{%- endfor %}
+])
+{%- elif element|element_type == 'CliOptionalGroup' %}
+	{%- if element.elements|length > 1 %}
+OptionalElement(ParameterGroup([
+		{%- for el in element.elements %}
+			{{- cli_element(el)|tab_indent }},
+		{%- endfor %}
+]))
+	{%- else %}
+OptionalElement({{- cli_element(element.elements|first)|tab_indent }})
+	{%- endif %}
+{%- elif element|element_type == 'CliSeparator' %}
+ParameterSeparator('{{element.value}}')
+{%- elif element|element_type == 'ParameterReference' %}
+	{%- if element.value.nonpositional %}
+NonPositionalParameter('{{element.value.name}}'{% if element.value.multiplicity and element.value.multiplicity != 1 %}, {{element.value.multiplicity}}{% endif %}){# TODO remove and when defaults #}
+	{%- else %}
+PositionalParameter('{{element.value.name}}'{% if element.value.multiplicity and element.value.multiplicity != 1 %}, {{element.value.multiplicity}}{% endif %}){# TODO remove and when defaults #}
+	{%- endif %}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro usage_model(usage) %}ParameterGroup([
+	{%- for element in usage.elements %}
+		{{- cli_element(element)|tab_indent }},
+	{%- endfor %}
+	{%- if usage.has_options %}
+		{%- for element in TODO %}
+	OptionalElement({{TODO}}), # TODO
+		{%- endfor %}
+	{%- endif %}
+	{%- if usage.has_subcommand %}
+	SubCommand(),
+	{%- endif %}
+])
+{%- endmacro %}
+
+{%- macro usages_model(usages) -%}
+{%- if usages|length > 1 %}OrGroup([
+	{%- for usage in usages %}
+		{{-'\n'}}{{- usage_model(usage)|tab_indent }},
+	{%- endfor %}
+])
+{%- else %}
+{{- usage_model(usages|first) }}
+{%- endif %}
+{%- endmacro %}
+from cli_parser import CommandParserModel, BasicNonpositional, MultiArgNonpositional, SeparatedNonpositional, CounterNonpositional,	BooleanNonpositional, ParameterGroup, OrGroup, OptionalElement, NonPositionalParameter, PositionalParameter, ParameterSeparator, SubCommand
+
+root_command_name = '{{root_command_name}}'
+
+command_models = {
+{%- for command in commands %}
+	'{{command.name}}' : CommandParserModel(
+		parameter_models=[
+		{%- for parameter in command.resolved_parameters %}
+			{%- set val = parameter|parameter_model %}
+			{%- if val %}
+			{{ val }}
+			{%- endif %}
+		{%- endfor %}
+		],
+		usage_model={{ usages_model(command.usages)|tab_indent(2, start_from=2) }},
+		default_values={
+		{%- for name, value in default_values[command.name].items() %}
+			'{{name}}':'{{value}}', 
+		{%- endfor %}
+		},
+		usage_help="""{{command.usage_help}}""",
+		long_usage_help="""{{command.long_usage_help}}""",
+		{%- if command.sub_commands %}
+		sub_commands=[{% for sc in command.sub_commands %}{% if sc|element_type == 'CommandReference' %}{% set sc = sc.value %}{% endif %}{% if sc.cli_command %}('{{sc.name}}', '{{sc.cli_command}}'){% else %}'{{sc.name}}'{% endif %},{% endfor %}],
+		{%- endif %}
+		{%- if cli_separators[command.name] %}
+		separators={{cli_separators[command.name]}}
+		{%- endif %}
+		{%- if builtin_help_params[command.name] %}
+		builtin_help_params={{builtin_help_params[command.name]}},
+		{%- endif %}
+		{%- if builtin_long_help_params[command.name] %}
+		builtin_long_help_params={{builtin_long_help_params[command.name]}},
+		{%- endif %}
+	),
+{%- endfor %}
+}

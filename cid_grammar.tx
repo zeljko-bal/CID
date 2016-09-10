@@ -1,0 +1,255 @@
+
+Script:
+  imports*=ImportStatement
+  elements+=ScriptElement
+;
+
+ImportStatement:
+  'import' path=ImportReference ('as' alias=ImportReference)?
+;
+
+ImportReference:
+  '/'elements+=/\w+/['/']
+;
+
+ScriptElement:
+  Parameter|Command
+;
+
+// COMMAND ----------
+
+Command:
+  type=CommandType name=ID (title=STRING)? (':'
+   (('description:' description=STRING)|
+    ('help:' help=STRING)|
+    ('parameters:' '{' parameters+=CommandParameter '}')|
+    ('commands:' '{' sub_commands+=SubCommand '}')|
+    ('constraints:' constraints=CodeBlock)|
+    ('cli_command:' cli_command=STRING)|
+	('help_params:' help_params+=STRING[','])|
+	('long_help_params:' long_help_params+=STRING[','])|
+    ('usage:' (usages+=CliStructureMultiLine)|(usage=CliStructure))|
+    ('gui:' gui=GuiStructure))*
+  )?
+;
+
+CommandType:
+  "Cmd"|"Sub"
+;
+
+CommandParameter:
+  ParameterReference|Parameter
+;
+
+SubCommand:
+  CommandReference|Command
+;
+
+// PARAMETER ----------
+
+Parameter:
+  type=ParameterType name=ID (title=STRING)? (':'
+   (('description:' description=STRING)|
+    ('help:' help=STRING)|
+    ('default:' default=STRING|default_is_none?='None')|
+    ('none_value:' none_value_allowed=NoneValueAllowed)|
+    ('multiplicity:' multiplicity=ParameterMultiplicity)|
+    ('widget:' widget=GuiWidget)|
+    ('choices:' choices+=ChoiceParameterValue[','])|
+    ('date_format:' date_format=STRING)|
+    ('cli:' cli=ParameterCliValue (',' cli_aliases+=ParameterCliPattern[','])?)|
+    ('constraints:' constraints+=ParameterConstraint))*
+  )?
+;
+
+ParameterType:
+  "Str"|"Num"|"Bool"|"Date"|"File"|"Choice"
+;
+
+NoneValueAllowed:
+  'Allowed'|'Disallowed'
+;
+
+ParameterMultiplicity:
+  INT|'*'
+;
+
+GuiWidget:
+  "password"|"text_field"|"text_area"|"dropdown"|"radio_buttons"|"counter"|"slider"
+;
+
+ChoiceParameterValue:
+  STRING|CodeBlock
+;
+
+ParameterCliValue:
+  (cli_pattern=ParameterCliPattern)|(code_block=CodeBlock)
+;
+
+ParameterCliPattern:
+  StringParamPattern|BooleanParamPattern
+;
+
+StringParamPattern[noskipws]:
+  /\s*/'"' prefix=CliLiteralValue white_space?=/\s+/ '{' ((count=INT) | (count_many?='*'('|'separator=/./)?) | ('count:'count_char=/\w/))? '}' '"'
+;
+
+BooleanParamPattern:
+  BoolWithPositivePattern|BoolNegativeOnlyPattern
+;
+
+BoolWithPositivePattern:
+  '"' positive=CliLiteralValue ('|' negative=CliLiteralValue)? '"'
+;
+
+BoolNegativeOnlyPattern:
+  '"' positive='' '|' negative=CliLiteralValue '"'
+;
+
+CliLiteralValue:
+  /[\w\-=\/]+/
+;
+
+// ----------
+
+ParameterReference:
+  !KeyWord (local=ID)|(imported=ImportReference)
+;
+
+CommandReference:
+  !KeyWord (local=ID)|(imported=ImportReference)
+;
+
+// TODO automatic keywords u metamodel
+KeyWord:
+  (NoneValueAllowed /\b/)|(ParameterMultiplicity /\b/)|"None/\b/"|"description:"|"help:"|"usage:"|"parameters:"|
+  "commands:"|"cli_command:"|"gui:"|"section/\b/"|"stack:"|"grid:"|(CommandType /\b/)|(ParameterType /\b/)
+;
+
+CodeBlock:
+  "<<"
+    code=/(?s)((?!>>).)*/ // matches everything until >> is encountered
+  ">>"
+;
+
+// CONSTRAINTS ----------
+
+ParameterConstraint: // TODO posebni tipovi ogranicenja sa posebnom sintaksom
+  type=ConstraintType ':'
+    (value=ConstraintValue)?
+    (message=STRING)?
+;
+
+ConstraintValue:
+  RegexConstraintValue|FLOAT|DateConstraintValue|DurationConstraintValue|CodeBlock
+;
+
+RegexConstraintValue:
+  /\/.*\//
+;
+
+DateConstraintValue:
+  /not implemented/ // TODO
+;
+
+DurationConstraintValue:
+  /not implemented/ // TODO
+;
+
+ConstraintType:
+  'max'|'min'|'min_length'|'max_length'|'regex'|'alphanumeric'|'integer'|
+  'from_now'|'before_now'|'exists'|'doesnt_exist'|'is_file'|'is_directory'
+; // TODO from_now i before_now lepse i da moze vise ili manje
+
+// CLI ----------
+
+CliStructureMultiLine:
+  '-' body=CliStructure
+;
+
+CliStructure:
+  elements+=CliElement has_options?="{options}" has_subcommand?="{sub_command}"
+;
+
+CliElement:
+  CliOrGroup|CliBasicEllement
+;
+
+CliBasicEllement:
+  CodeBlock|CliGroup|CliOptionalGroup|CliSeparator|ParameterReference
+;
+
+CliSeparator:
+  ("{separator|"value=/\w+/"}")|value="--"
+;
+
+CliGroup:
+  '(' elements+=CliElement ')'
+;
+
+CliOptionalGroup:
+  '[' elements+=CliElement ']'
+;
+
+CliOrGroup:
+  (lhs=CliBasicEllement '|' rhs=CliOrGroup)|
+  (lhs=CliBasicEllement '|' rhs=CliBasicEllement)
+;
+
+// GUI ----------
+
+GuiStructure:
+  elements+=GuiElement
+;
+
+GuiElement:
+  GuiTabs|GuiSection|GuiStack|GuiGrid|ParameterReference
+;
+
+GuiTabs:
+  'tabs:'
+    tabs+=GuiTab
+;
+
+GuiTab:
+  title=STRING ':'
+  '{'
+    body=GuiStructure
+  '}'
+;
+
+GuiSection:
+  'section' (title=STRING)? ':'
+  '{'
+    body=GuiStructure
+  '}'
+;
+
+GuiStack:
+  "stack:" body=GuiGridRow
+;
+
+GuiGrid:
+  "grid:"
+    rows+=GuiGridRow
+;
+
+GuiGridRow:
+  '[' fields*=GuiGridCell['|'] ']'
+;
+
+GuiGridCell:
+  EmptyCell|CellSpan|ParameterReference
+;
+
+EmptyCell:
+  /_+/
+;
+
+CellSpan:
+  /-+/
+;
+
+Comment:
+  /#.*$/
+;
