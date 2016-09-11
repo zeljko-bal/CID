@@ -4,13 +4,15 @@ from collections import OrderedDict
 PRIMITIVE_PYTHON_TYPES = [int, float, str, bool]
 
 class ModelPrinter:
-	def __init__(self, omitted_attributes=[], primitive_types=[int, float, str, bool], indent_str='    ', indent_separator='|', 
+	def __init__(self, omitted_attributes=[], primitive_types=[int, float, str, bool], indent_str='    ', indent_separator='|', name_attr='name', parent_attr='parent', 
 						print_empty_attrs=False, print_empty_lists=False, print_list_index=False):
 		self.printed = []
-		self.omitted_attributes = ['parent', 'name'] + omitted_attributes
+		self.omitted_attributes = [parent_attr, name_attr] + omitted_attributes
 		self.primitive_types = primitive_types
 		self.indent_str = indent_str
 		self.indent_separator = indent_separator
+		self.name_attr = name_attr
+		self.parent_attr = parent_attr
 		self.print_empty_attrs = print_empty_attrs
 		self.print_empty_lists = print_empty_lists
 		self.print_list_index = print_list_index
@@ -22,9 +24,9 @@ class ModelPrinter:
 		return '\n'.join([self.indent(level)+line if idx+1 >= start_from else line for idx, line in enumerate(text.split('\n'))])
 	
 	def model_path(self, model):
-		name = model.name if hasattr(model, 'name') else model.__class__.__name__
-		if hasattr(model, 'parent'):
-			parent_path = self.model_path(model.parent)
+		name = getattr(model, self.name_attr) if hasattr(model, self.name_attr) else model.__class__.__name__
+		if hasattr(model, self.parent_attr):
+			parent_path = self.model_path(getattr(model, self.parent_attr))
 			return parent_path+'/'+name
 		else:
 			return '/'+name
@@ -39,8 +41,8 @@ class ModelPrinter:
 			return
 		
 		has_name = name is not None
-		if not name and hasattr(model, 'name'):
-			name = model.name
+		if not name and hasattr(model, self.name_attr):
+			name = getattr(model, self.name_attr)
 		if isinstance(model, (list, set)):
 			print(self.indent(indent_level)+'{name}({length}):'.format(name=name, length=len(model)))
 			for idx, el in enumerate(model):

@@ -12,23 +12,19 @@ script = """
 
 Bool option1 "option1":
 	cli: "--option1", "-o1|-no1"
-	default: "False"
 
 Cmd command1 "Command1":
 	help: "help"
 	parameters:
 	{
-		Str par0:
-			default: "asd"
+		Date par0
 		
 		option1
 			
-		Str par2:
-			default: "asd"
+		Str par2
 			
 		Str par1:
 			cli: "--par1 {5}", "-p1 {}"
-			default: "asd"
 			
 		Str par3:
 			multiplicity: 2
@@ -48,7 +44,6 @@ Cmd command1 "Command1":
 				option1
 				Bool help:
 					cli: "--help", "-h"
-					default: "False"
 			}
 			cli_command: "subcommand2"
 		Sub sub3
@@ -86,14 +81,6 @@ def parent_command(reference):
 		parent = parent.parent
 	return parent
 	
-def all_parent_commands(command):
-	parent = parent_command(command)
-	ret = []
-	while parent:
-		ret.append(parent)
-		parent = parent_command(parent)
-	return ret
-	
 def dereference(element):
 	if element_type(element) in ['ParameterReference', 'CommandReference']:
 		if hasattr(element, 'value'):
@@ -122,6 +109,14 @@ def process_script(script):
 	script.free_commands = [p for p in script.elements if element_type(p) == 'Command']
 	if contains_duplicate_names(script.free_commands):
 		raise Exception('same_name_commands_check')
+		
+	# check for duplicate import paths
+	if len(script.imports) != len(set([imp.path for imp in script.imports])):
+		raise Exception('duplicate path in imports')
+		
+	# check for duplicate import aliases
+	if len(script.imports) != len(set([imp.alias for imp in script.imports])):
+		raise Exception('duplicate alias in imports')
 	
 def process_cli_or_group(or_group):
 	# transform the tree structure into a list
@@ -134,6 +129,7 @@ def process_cli_or_group(or_group):
 	del or_group.lhs
 	del or_group.rhs
 	
+	# moze i drugi pass TODO, da ne ispisuje i za importovane skripte ako se komanda ne koristi
 	# check for CliOptionalGroup in CliOrGroup
 	for element in or_group.elements:
 		if element_type(element) == 'CliOptionalGroup':
@@ -151,9 +147,12 @@ class CommandProcessor:
 			command.usages = [command.usage]
 			del command.usage
 		
+	def command_defaults(self, command):
+		# default for command.cli_command
 		if not command.cli_command:
 			command.cli_command = command.name
 	
+	# mozda moze u second pass
 	def check_command(self, command):
 		if contains_duplicate_names(command.parameters):
 			raise Exception('same_name_params_check')
@@ -163,73 +162,20 @@ class CommandProcessor:
 	
 	def process_command(self, command):
 		self.transform_command(command)
+		self.command_defaults(command)
 		self.check_command(command)
 		self.all_defined_commands.append(command)
-
-def cli_pattern_repr(pattern):
-	if element_type(pattern) == 'StringParamPattern':
-		if pattern.count_char:
-			return '{pref}{count_char}'.format(pref=repr_pattern.prefix, count_char=repr_pattern.count_char)
-		else:
-			space = ' ' if pattern.white_space else ''
-			if pattern.count:
-				count_repr = '...{}'.format(pattern.count)
-			elif pattern.count_many:
-				if pattern.separator:
-					count_repr = '...[{}]'.format(pattern.separator)
-				else:
-					count_repr  = '...'
-			else:
-				count_repr = ''
-			return '{pref}{space}<{count}>'.format(pref=pattern.prefix, space=space, count=count_repr)
-	else:
-		if pattern.positive and pattern.negative:
-			return pattern.positive, pattern.negative
-		elif pattern.positive:
-			return pattern.positive, None
-		elif pattern.negative:
-			return None, pattern.negative
 		
 class ParameterProcessor:
 	def __init__(self, imported_prefixes=[]):
 		self.all_prefixes = imported_prefixes
 		self.all_defined_parameters = []
 		
-	def process_parameter(self, parameter):
-		if parameter.widget:
-			supported_widgets = {
-			 'Str':['password', 'text_field', 'text_area', ],
-			 'Choice':['dropdown', 'radio_buttons'],
-			 'Num':['counter', 'slider'],
-			}[element_type(parameter)]
-			if parameter.widget not in supported_widgets:
-				raise Exception('parameter.widget unsupported')
+	def transform_parameter(self, parameter):
+		# set parameter.nonpositional
+		parameter.nonpositional = parameter.cli and parameter.cli.cli_pattern
 		
-		if parameter.choices and not element_type(parameter) == 'Choice':
-			raise Exception('choices in not Choice')
-		
-		if element_type(parameter) == 'Choice' and not parameter.choices:
-			raise Exception('choices required in Choice')
-		
-		if parameter.date_format and not element_type(parameter) == 'Date':
-			raise Exception('date_format in not Date')
-		
-		for constraint in parameter.constraints:
-			supported_constraints = {
-			 'Str':[],
-			 'Choice':[],
-			 'Num':[],
-			}[element_type(parameter)]
-			if constraint.type not in supported_constraints:
-				raise Exception('constraint.type unsupported')
-		
-		if not parameter.none_value_allowed == 'Allowed' and parameter.default == 'None':
-			raise Exception("parameter.none value disallowed and parameter.default == 'None'")
-			
-		if parameter.default_is_none and parameter.default:
-			raise Exception('parameter.default_is_none and parameter.default')
-			
-		parameter.nonpositional = True if parameter.cli and parameter.cli.cli_pattern else False
+		# fill parameter.prefixes, parameter.pos_prefixes, parameter.neg_prefixes
 		if parameter.nonpositional:
 			parameter.prefixes = []
 			if parameter.type == 'Bool':
@@ -256,11 +202,13 @@ class ParameterProcessor:
 					raise Exception('duplicate prefixes')
 				self.all_prefixes.append(prefix)
 		
+		# moglo bi u drugi pass TODO, da kad se importuje nemora sve iz skripte da obradi ako se samo neki koriste
+		# fill parameter.usage_repr
 		if parameter.nonpositional:
-			if str_patterns:
+			if not parameter.type == 'Bool':
 				repr_pattern = max(str_patterns, key=lambda p: len(p.prefix)) # longest prefix
 				parameter.usage_repr = cli_pattern_repr(repr_pattern)
-			elif pos_patterns or neg_patterns:
+			else: # parameter.type == 'Bool':
 				if pos_patterns:
 					repr_pattern = max(pos_patterns, key=lambda p: len(p.positive)) # longest positive
 					parameter.usage_repr, _ = cli_pattern_repr(repr_pattern)
@@ -270,93 +218,133 @@ class ParameterProcessor:
 		else:
 			parameter.usage_repr = "<{}{}>".format(parameter.name.upper(), '...' if parameter.multiplicity == '*' else '')
 		
+	def check_parameter(self, parameter):
+		if parameter.widget:
+			supported_widgets = {
+			 'Str':['password', 'text_field', 'text_area'],
+			 'Choice':['dropdown', 'radio_buttons'],
+			 'Num':['counter', 'slider'],
+			}[element_type(parameter)]
+			if parameter.widget not in supported_widgets:
+				raise Exception('parameter.widget unsupported')
+		
+		if parameter.choices and not element_type(parameter) == 'Choice':
+			raise Exception('choices in not Choice')
+		
+		if element_type(parameter) == 'Choice' and not parameter.choices:
+			raise Exception('choices required in Choice')
+		
+		for constraint in parameter.constraints:
+			supported_constraints = {
+			 'Str':[],
+			 'Choice':[],
+			 'Num':[],
+			}[element_type(parameter)]
+			if constraint.type not in supported_constraints:
+				raise Exception('constraint.type unsupported')
+		
+		if not parameter.none_value_allowed == 'Allowed' and parameter.default == 'None':
+			raise Exception("parameter.none value disallowed and parameter.default == 'None'")
+			
+		if parameter.default_is_none and parameter.default:
+			raise Exception('parameter.default_is_none and parameter.default')
+		
+	def process_parameter(self, parameter):
+		self.transform_parameter(parameter)
+		self.check_parameter(parameter)
 		self.all_defined_parameters.append(parameter)
+		
+def cli_pattern_repr(pattern):
+	if element_type(pattern) == 'StringParamPattern':
+		if pattern.count_char:
+			return '{pref}{count_char}'.format(pref=repr_pattern.prefix, count_char=repr_pattern.count_char)
+		else:
+			space = ' ' if pattern.white_space else ''
+			if pattern.count:
+				count_repr = '...{count}'.format(count=pattern.count)
+			elif pattern.count_many:
+				if pattern.separator:
+					count_repr = '...[{separator}]'.format(separator=pattern.separator)
+				else:
+					count_repr  = '...'
+			else:
+				count_repr = ''
+			return '{pref}{space}<{count}>'.format(pref=pattern.prefix, space=space, count=count_repr)
+	else:
+		if pattern.positive and pattern.negative:
+			return pattern.positive, pattern.negative
+		elif pattern.positive:
+			return pattern.positive, None
+		elif pattern.negative:
+			return None, pattern.negative
 
 # ------------------------------- JINJA FILTERS -------------------------------
 
 def parameter_model_filter(parameter):
-	if parameter.nonpositional:
-		def print_list(lst):
-			return str(lst) if len(lst) > 1 else "'{}'".format(lst[0])
+	print_list = lambda lst: str(lst) if len(lst) > 1 else "'{}'".format(lst[0])
+	
+	all_patterns = ([parameter.cli.cli_pattern] if parameter.cli.cli_pattern else []) + parameter.cli_aliases
+	
+	if parameter.type == 'Bool':
+		positives = [p.positive for p in all_patterns if p.positive]
+		negatives = [p.negative for p in all_patterns if p.negative]
 		
-		if parameter.type == 'Bool':
-			positives = []
-			negatives = []
-			
-			for pattern in ([parameter.cli.cli_pattern] if parameter.cli.cli_pattern else []) + parameter.cli_aliases:
-				if pattern.positive:
-					positives.append(pattern.positive)
-				if pattern.negative:
-					negatives.append(pattern.negative)
-			
-			if not positives and not negatives:
-				return ''
-			
-			if positives:
-				positives_str = ", positives={}".format(print_list(positives))
-			else:
-				positives_str=''
-
-			if negatives:
-				negatives_str = ", negatives={}".format(print_list(negatives))
-			else:
-				negatives_str=''
-			
-			return "BooleanNonpositional('{name}'{positives}{negatives}),".format(name=parameter.name, positives=positives_str, negatives=negatives_str)
-		else:
-			ret = []
-			classified = defaultdict(lambda: defaultdict(set))
-			for pattern in ([parameter.cli.cli_pattern] if parameter.cli.cli_pattern else []) + parameter.cli_aliases:
-				if pattern.white_space:
-					if pattern.count:
-						count_str = ", {}".format(pattern.count)
-					elif pattern.count_many:
-						count_str = ", '*'"
-					else:
-						count_str = ''
-					classified['MultiArgNonpositional'][count_str].add(pattern)
-				else:
-					if pattern.count_many:
-						if pattern.separator:
-							separator_str = ", '{}'".format(pattern.separator)
-						else:
-							separator_str = ''
-						classified['SeparatedNonpositional'][separator_str].add(pattern)
-					elif pattern.count_char:
-						classified['CounterNonpositional'][count_char].add(pattern)
-					else:
-						classified['BasicNonpositional']['_'].add(pattern)
-			
-			if classified['MultiArgNonpositional']:
-				for count_str, patterns in classified['MultiArgNonpositional'].items():
-					prefixes = [p.prefix for p in patterns]
-					ret.append("MultiArgNonpositional('{name}', {prefixes}{count_str})".format(name=parameter.name, prefixes=print_list(prefixes), count_str=count_str))
-			if classified['SeparatedNonpositional']:
-				for separator_str, patterns in classified['SeparatedNonpositional'].items():
-					prefixes = [p.prefix for p in patterns]
-					ret.append("SeparatedNonpositional('{name}', {prefixes}{separator_str})".format(name=parameter.name, prefixes=print_list(prefixes), separator_str=separator_str))
-			if classified['CounterNonpositional']:
-				for count_char, patterns in classified['CounterNonpositional'].items():
-					prefixes = [p.prefix for p in patterns]
-					ret.append("CounterNonpositional('{name}', {prefixes}'{count_char}'), ".format(name=parameter.name, prefixes=print_list(prefixes), count_char=count_char))
-			if classified['BasicNonpositional']:
-				for _, patterns in classified['BasicNonpositional'].items():
-					prefixes = [p.prefix for p in patterns]
-					ret.append("BasicNonpositional('{name}', {prefixes})".format(name=parameter.name, prefixes=print_list(prefixes)))
-			return ', '.join(ret)
+		positives_str = ", positives={prefixes}".format(prefixes=print_list(positives)) if positives else ''
+		negatives_str = ", negatives={prefixes}".format(prefixes=print_list(negatives)) if negatives else ''
+		
+		return "BooleanNonpositional('{name}'{positives}{negatives}),".format(name=parameter.name, positives=positives_str, negatives=negatives_str)
 	else:
-		return ''
+		ret = []
+		classified = defaultdict(lambda: defaultdict(set))
+		for pattern in all_patterns:
+			if pattern.white_space:
+				if pattern.count:
+					count_str = ", {count}".format(count=pattern.count)
+				elif pattern.count_many:
+					count_str = ", '*'"
+				else:
+					count_str = ''
+				classified['MultiArgNonpositional'][count_str].add(pattern)
+			else:
+				if pattern.count_many:
+					if pattern.separator:
+						separator_str = ", '{}'".format(pattern.separator)
+					else:
+						separator_str = ''
+					classified['SeparatedNonpositional'][separator_str].add(pattern)
+				elif pattern.count_char:
+					classified['CounterNonpositional'][count_char].add(pattern)
+				else:
+					classified['BasicNonpositional']['_'].add(pattern)
+		
+		if classified['MultiArgNonpositional']:
+			for count_str, patterns in classified['MultiArgNonpositional'].items():
+				prefixes = [p.prefix for p in patterns]
+				ret.append("MultiArgNonpositional('{name}', {prefixes}{count_str})".format(name=parameter.name, prefixes=print_list(prefixes), count_str=count_str))
+		if classified['SeparatedNonpositional']:
+			for separator_str, patterns in classified['SeparatedNonpositional'].items():
+				prefixes = [p.prefix for p in patterns]
+				ret.append("SeparatedNonpositional('{name}', {prefixes}{separator_str})".format(name=parameter.name, prefixes=print_list(prefixes), separator_str=separator_str))
+		if classified['CounterNonpositional']:
+			for count_char, patterns in classified['CounterNonpositional'].items():
+				prefixes = [p.prefix for p in patterns]
+				ret.append("CounterNonpositional('{name}', {prefixes}'{count_char}'), ".format(name=parameter.name, prefixes=print_list(prefixes), count_char=count_char))
+		if classified['BasicNonpositional']:
+			for _, patterns in classified['BasicNonpositional'].items():
+				prefixes = [p.prefix for p in patterns]
+				ret.append("BasicNonpositional('{name}', {prefixes})".format(name=parameter.name, prefixes=print_list(prefixes)))
+		return ', '.join(ret)
 		
 def tab_indent_filter(text, level=1, start_from=1):
 	return '\n'.join([(level*'\t')+line if idx+1 >= start_from else line for idx, line in enumerate(text.split('\n'))])
-
+	
 def raise_exception_helper(msg):
 	raise Exception(msg)
 	
 # ------------------------------- ModelProcessor -------------------------------
 
 class ModelProcessor:
-	def __init__(self, callbacks):
+	def __init__(self, callbacks, allow_revisiting=False):
 		if isinstance(callbacks, list):
 			self.callbacks = callbacks[0]
 			for cb in callbacks[1:]:
@@ -371,9 +359,13 @@ class ModelProcessor:
 						self.callbacks[key] = value
 		else:
 			self.callbacks = callbacks
+		self.allow_revisiting = allow_revisiting
 		self.parent_stack = []
+		self.visited = []
 		
 	def invoke(self, element):
+		if not self.allow_revisiting and element in self.visited:
+			return
 		callback_container = self.callbacks.get(element_type(element))
 		if callback_container:
 			callbacks = callback_container if isinstance(callback_container, list) else [callback_container]
@@ -385,6 +377,7 @@ class ModelProcessor:
 					callback(element)
 				else:
 					callback(element, self.parent_stack)
+			self.visited.append(element)
 	
 	def process_model(self, model):
 		self.parent_stack.append(model)
@@ -504,7 +497,7 @@ def gather_cli_sub_elements(cli_element):
 			cli_element.sub_elements.add(group_element.value)
 
 _duplicate_usage_elements_visitor = {'CliStructure':gather_cli_sub_elements, 'CliGroup':gather_cli_sub_elements, 'CliOptionalGroup':gather_cli_sub_elements, 'CliOrGroup':gather_cli_sub_elements}
-	
+
 def get_group_elements_usage_repr(group):
 	return [el.string_repr if hasattr(el, 'string_repr') else el.value.usage_repr for el in group.elements]
 	
@@ -527,7 +520,7 @@ def cli_or_group_usage_repr(group):
 _usage_repr_visitor = {'CliStructure':cli_structure_usage_repr, 'CliGroup':cli_group_usage_repr, 'CliOptionalGroup':cli_optional_group_usage_repr, 'CliOrGroup':cli_or_group_usage_repr}
 	
 def resolve_help_params(command):
-	for param in command.resolved_parameters: # remove all help params with the same prefixes as already existing params
+	for param in command.resolved_parameters: # remove all help params with the same prefixes as other already existing params
 		patterns = list(param.cli_aliases)
 		if param.cli and param.cli.cli_pattern:
 			patterns.append(param.cli.cli_pattern)
@@ -546,11 +539,28 @@ def resolve_help_params(command):
 				if pattern.negative in command.long_help_params:
 					command.long_help_params.remove(pattern.negative)
 
+def generate_parameters_usage_help(command, long):
+	rows = []
+	col_length = 0
+	for param in command.resolved_parameters:
+		param_patterns_repr = generate_param_patterns_repr(param)
+		col_length = max(len(param_patterns_repr), col_length)
+		desc_lines = textwrap.wrap(param.description, 50) # TODO config za width
+		rows.append((param_patterns_repr, desc_lines[0]))
+		for desc_line in desc_lines[1:]:
+			rows.append(('', desc_line))
+		if long and param.help:
+			help_lines = textwrap.wrap(param.help, 50) # TODO config za width
+			for help_line in help_lines:
+				rows.append(('', help_line))
+	row_format = '  {:'+str(col_length)+'}  {}'
+	return '\n'.join([row_format.format(*row) for row in rows])
+	
 def generate_param_patterns_repr(parameter):
 	if parameter.nonpositional:
 		repr_list = []
 		for pattern_repr in [cli_pattern_repr(p) for p in [parameter.cli.cli_pattern]+parameter.cli_aliases]:
-			if isinstance(pattern_repr, tuple): # TODO ugly, refactor
+			if isinstance(pattern_repr, tuple):
 				pos, neg = pattern_repr
 				if pos:
 					repr_list.append(pos)
@@ -561,23 +571,6 @@ def generate_param_patterns_repr(parameter):
 		return ', '.join(repr_list)
 	else:
 		return "<{}>".format(parameter.name.upper(), parameter.description)
-
-def generate_parameters_usage_help(command, long):
-	rows = []
-	col_length = 0
-	for param in command.resolved_parameters:
-		param_patterns_repr = generate_param_patterns_repr(param)
-		col_length = max(len(param_patterns_repr), col_length)
-		desc_lines = textwrap.wrap(param.description, 50)
-		rows.append((param_patterns_repr, desc_lines[0]))
-		for desc_line in desc_lines[1:]:
-			rows.append(('', desc_line))
-		if long and param.help:
-			help_lines = textwrap.wrap(param.help, 50)
-			for help_line in help_lines:
-				rows.append(('', help_line))
-	row_format = '  {:'+str(col_length)+'}  {}'
-	return '\n'.join([row_format.format(*row) for row in rows])
 	
 def generate_subcommands_usage_help(command, common_subcommand_help, parents):
 	rows = []
@@ -605,9 +598,11 @@ _usage_help_jinja_env = Environment(loader=FileSystemLoader('.'))
 _usage_help_jinja_env.filters['parameters_usage_help'] = generate_parameters_usage_help
 _usage_help_jinja_env.filters['subcommands_usage_help'] = generate_subcommands_usage_help
 _usage_help_template = _usage_help_jinja_env.get_template('usage_help.template')
-	
+
 def generate_usage_help(command, parents, long=False):
+	# this command followed by all the parent commands
 	command_str = ' '.join([c.cli_command for c in parents + [command]])
+	# a set of built in help parameters common to all subcommands
 	common_subcommand_help = reduce(lambda x,y: x.intersection(y), [set(c.help_params) for c in command.resolved_commands]) if command.sub_commands else []
 	
 	return _usage_help_template.render(command=command, parents=parents, long=long, command_str=command_str, common_subcommand_help=common_subcommand_help)
@@ -636,7 +631,6 @@ def command_defaults(command, parent_elements):
 	resolve_help_params(command)
 	
 	parent_commands = [parent for parent in parent_elements if element_type(parent) == 'Command']
-	#print(parent_commands, parent_elements)
 	command.usage_help = generate_usage_help(command, parent_commands)
 	command.long_usage_help = generate_usage_help(command, parent_commands, long=True)
 	
@@ -673,9 +667,22 @@ def parameter_defaults(parameter):
 			else:
 				parameter.description += " This parameter can appear at most {} times.".format(parameter.multiplicity)
 	
+	if not parameter.default:
+		parameter.default = {
+			"Str":"",
+			"Num":0,
+			"Bool":False,
+			"Date":"",
+			"File":".",
+			"Choice":parameter.choices[0] if parameter.choices else None,
+		}[parameter.type]
 	
-	
-	
+	if not parameter.none_value_allowed:
+		parameter.none_value_allowed = 'Disallowed' if parameter.default is not None else 'Allowed'
+		
+	if not parameter.date_format and parameter.type == 'Date':
+		parameter.date_format = "%d.%m.%Y"
+
 def import_statement_defaults(import_statement):
 	if not import_statement.alias:
 		import_statement.alias = import_statement.path
@@ -697,6 +704,8 @@ def get_cli_separators(commands):
 if __name__ == '__main__':
 	metamodel = metamodel_from_file('cid_grammar.tx', classes=[])
 	
+	# first pass ---------------------
+	
 	command_processor = CommandProcessor()
 	parameter_processor = ParameterProcessor()
 	
@@ -710,6 +719,8 @@ if __name__ == '__main__':
 	
 	model = metamodel.model_from_str(script)
 	
+	# second pass ---------------------
+	
 	ModelProcessor(ReferenceResolver(parameter_processor.all_defined_parameters, command_processor.all_defined_commands).visitor).process_model(model)
 	ModelProcessor(_duplicate_usage_elements_visitor).process_model(model)
 	ModelProcessor(_usage_repr_visitor).process_model(model)
@@ -719,6 +730,8 @@ if __name__ == '__main__':
 	builtin_help_params = {cmd.name : cmd.help_params for cmd in command_processor.all_defined_commands}
 	builtin_long_help_params = {cmd.name : cmd.long_help_params for cmd in command_processor.all_defined_commands}
 	cli_separators = get_cli_separators(command_processor.all_defined_commands)
+	
+	# print model ---------------------
 	
 	print_model(model, omitted_attributes=['resolved_commands', 'resolved_parameters', 
 	#'usage_help', 'long_usage_help'
@@ -738,7 +751,7 @@ if __name__ == '__main__':
 
 	with open("command1_cli_config.py", "w") as text_file:
 		text_file.write(rendered)
-		
+	
 	from command1_cli_config import root_command_name, command_models
 	from cli_parser import parse_cli_args, invoke_commands
 	
@@ -751,6 +764,7 @@ if __name__ == '__main__':
 	
 
 
-# fill in script defaults []
 # choices custom code []
-# custom -h --help -a i --all
+# custom -h --help -a i --all []
+# replace reference with real object []
+# kad se importuje skripta u procesorima da se preskacu elementi koji se ne koriste []

@@ -64,7 +64,7 @@ TODO:
 from collections import namedtuple
 
 class CommandParserModel:
-	def __init__(self, parameter_models, usage_model, default_values, usage_help, long_usage_help, sub_commands=[], separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
+	def __init__(self, parameter_models, usage_model, default_values, usage_help='', long_usage_help='', sub_commands=[], separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
 		self.parameter_models = parameter_models
 		self.usage_model = usage_model
 		self.sub_commands = sub_commands
@@ -84,7 +84,13 @@ class MatchedArgument:
 		return self.name == other.name
 		
 	def __repr__(self):
-		return "<{} = {}>".format(self.name, self.value)
+		if isinstance(self.value, str):
+			val = "'{}'".format(self.value)
+		elif self.value is None:
+			val = 'None'
+		else:
+			val = self.value
+		return "<{name} = {value}>".format(name=self.name, value=val)
 
 # --------------------- NONPOSITIONAL ARGUMENT PARSER ---------------------
 
