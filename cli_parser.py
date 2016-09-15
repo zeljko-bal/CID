@@ -39,14 +39,6 @@ Char:
 	/[a-zA-Z0-9]/
 ;
 
-- multiplicity mora biti vece od 0
-- positional multiplicity: moze samo * ili 1
-- positional multiplicity: * moze samo na kraju
-- boolean multiplicity moze samo 1
-- {} u cli moze samo za string, date, Number itd..
-- --nesto|--not-nesto moze samo za bool
-- {count:c} moze samo za Number
-
 --par1 --par3 --par4
 (--par1 [--par2 --par3] (--par4)|(--par5) [--par6])
 (par --par [--par par] (--par par)|(--par))
@@ -62,11 +54,15 @@ TODO:
 '''
 	
 from collections import namedtuple
+import datetime
 
 class CommandParserModel:
-	def __init__(self, parameter_models, usage_model, default_values, usage_help='', long_usage_help='', sub_commands=[], separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
+	def __init__(self, parameter_models, usage_model, parameter_types, default_values, date_formats={}, 
+			usage_help='', long_usage_help='', sub_commands=[], separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
 		self.parameter_models = parameter_models
 		self.usage_model = usage_model
+		self.parameter_types = parameter_types
+		self.date_formats = date_formats
 		self.sub_commands = sub_commands
 		self.separators = separators
 		self.default_values = default_values
@@ -91,7 +87,24 @@ class MatchedArgument:
 		else:
 			val = self.value
 		return "<{name} = {value}>".format(name=self.name, value=val)
-
+		
+def is_iterable(obj):
+	return hasattr(obj, '__iter__') and not isinstance(obj, str)
+		
+def convert_data(data, type, date_format=''):
+	if is_iterable(data):
+		return [convert_data(element, type, date_format) for element in data]
+	elif isinstance(data, str):
+		if type == "Num":
+			try:
+				return int(data_str)
+			except ValueError:
+				return float(data_str)
+		elif type == "Date":
+			return datetime.strptime(data_str, date_format)
+	else:
+		return data
+		
 # --------------------- NONPOSITIONAL ARGUMENT PARSER ---------------------
 
 class NonpositionalArgumentParser:
@@ -193,13 +206,20 @@ class BasicNonpositional:
 			return None, args
 	
 class MultiArgNonpositional:
-	def __init__(self, name, prefixes, count=1):
+	def __init__(self, name, prefixes, vars=[], count=1):
 		self.name = name
 		if isinstance(prefixes, str):
 			self.prefixes = [prefixes]
 		else:
 			self.prefixes = prefixes
-		self.count = count
+		self.vars = vars
+		if vars:
+			if count != 1 and count != len(vars):
+				print('MultiArgNonpositional: warning, internal error, vars list provided, count argument will be ignored.')
+			self.count = len(vars)
+			self.data_tuple = namedtuple(name, vars)
+		else:
+			self.count = count
 	
 	def match(self, args, parser):
 		if equals_any(args[0], self.prefixes):
@@ -218,6 +238,8 @@ class MultiArgNonpositional:
 					ret = args[1:self.count+1]
 				else:
 					ret = args[1]
+				if self.vars:
+					ret = self.data_tuple(*ret)
 			matched_count = 1 if self.count == 1 else len(ret)
 			return ret, args[matched_count+1:]
 		else:
@@ -256,7 +278,7 @@ class CounterNonpositional:
 		if prefix:
 			to_count = arg[len(prefix):]
 			if len(to_count) == to_count.count(self.count_char): # no other chars
-				return len(to_count), args[1:]
+				return len(to_count)+1, args[1:]
 		return None, args
 	
 class BooleanNonpositional:
@@ -466,6 +488,8 @@ def parse_cli_args(root_command_name, command_models, args):
 		for missing_arg in [arg_name for arg_name in command_model.default_values if arg_name not in matched_names]: # for all args in defaults not present in matched args
 			all_matched_args.append(MatchedArgument(missing_arg, command_model.default_values[missing_arg])) # add default values
 		
+		all_matched_args = [convert_data(arg, command_model.parameter_types[arg.name], command_model.date_formats.get(arg.name, None)) for arg in all_matched_args]
+		
 		matched_args[command_name] = CommandArgs(all_matched_args, command.sub_command)
 	
 	return matched_args
@@ -526,6 +550,7 @@ def invoke_commands(command_callbacks, root_command_name, command_models, args):
 
 	
 # ------------------------------ TO BE GENERATED DATA ------------------------------
+'''
 root_command_name = 'root_command'
 command_models = {
 	'root_command' : CommandParserModel(
@@ -612,3 +637,4 @@ if __name__ == '__main__':
 	def dummy_print_callback(args, sub_command):
 		print('dummy callback:\n\t', args, '\n\tsub_command: {}'.format(sub_command))
 	invoke_commands({'root_command':dummy_print_callback, 'subcommand1':dummy_print_callback, 'subcommand2':dummy_print_callback}, root_command_name, command_models, args)
+'''

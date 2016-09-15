@@ -29,7 +29,7 @@ Command:
 	('help_params:' help_params+=STRING[','])|
 	('long_help_params:' long_help_params+=STRING[','])|
     ('usage:' (usages+=CliStructureMultiLine)|(usage=CliStructure))|
-    ('gui:' gui=GuiStructure))*
+    ('gui:' gui=GuiStructure))+
   )?
 ;
 
@@ -51,14 +51,14 @@ Parameter:
   type=ParameterType name=ID (title=STRING)? (':'
    (('description:' description=STRING)|
     ('help:' help=STRING)|
-    ('default:' default=STRING|default_is_none?='None')|
+    ('default:' default+=STRING[',']|default_is_none?='None')|
     ('none_value:' none_value_allowed=NoneValueAllowed)|
     ('multiplicity:' multiplicity=ParameterMultiplicity)|
     ('widget:' widget=GuiWidget)|
     ('choices:' choices+=ChoiceParameterValue[','])|
     ('date_format:' date_format=STRING)|
     ('cli:' cli=ParameterCliValue (',' cli_aliases+=ParameterCliPattern[','])?)|
-    ('constraints:' constraints+=ParameterConstraint))*
+    ('constraints:' constraints+=ParameterConstraint))+
   )?
 ;
 
@@ -91,7 +91,11 @@ ParameterCliPattern:
 ;
 
 StringParamPattern[noskipws]:
-  /\s*/'"' prefix=CliLiteralValue white_space?=/\s+/ '{' ((count=INT) | (count_many?='*'('|'separator=/./)?) | ('count:'count_char=/\w/))? '}' '"'
+  /\s*/'"'/\s*/ prefix=CliLiteralValue white_space?=/\s+/ '{'/\s*/ ((vars+=StringParamPatternVarName[/\s*,\s*/]) | (count=INT) | (count_many?='*'('|'separator=/./)?) | ('count:'count_char=/\w/))? /\s*/'}' /\s*/'"'
+;
+
+StringParamPatternVarName:
+	"'" value=/[^']+/ "'"
 ;
 
 BooleanParamPattern:
@@ -176,11 +180,11 @@ CliElement:
 ;
 
 CliBasicEllement:
-  CodeBlock|CliGroup|CliOptionalGroup|CliSeparator|ParameterReference
+  CodeBlock|CliOptionalGroup|CliSeparator|ParameterReference
 ;
 
 CliSeparator:
-  ("{separator|"value=/\w+/"}")|value="--"
+  ("{separator|"value=/[^}]+/"}")|value="--"
 ;
 
 CliGroup:
@@ -193,6 +197,10 @@ CliOptionalGroup:
 
 CliOrGroup:
   (lhs=CliBasicEllement '|' rhs=CliOrGroup)|
+  (lhs=CliGroup '|' rhs=CliOrGroup)|
+  (lhs=CliGroup '|' rhs=CliGroup)|
+  (lhs=CliBasicEllement '|' rhs=CliGroup)|
+  (lhs=CliGroup '|' rhs=CliBasicEllement)|
   (lhs=CliBasicEllement '|' rhs=CliBasicEllement)
 ;
 

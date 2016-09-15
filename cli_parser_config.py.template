@@ -23,13 +23,13 @@ OptionalElement(ParameterGroup([
 	{%- else -%}
 OptionalElement({{ cli_element(element.elements|first) }})
 	{%- endif %}
-{%- elif element|element_type == 'CliSeparator' %}
+{%- elif element|element_type == 'CliSeparator' -%}
 ParameterSeparator('{{element.value}}')
-{%- elif element|element_type == 'ParameterReference' %}
-	{%- if element.value.nonpositional -%}
-NonPositionalParameter('{{element.value.name}}'{% if element.value.multiplicity and element.value.multiplicity != 1 %}, {{element.value.multiplicity}}{% endif %}){# TODO remove and when defaults #}
-	{%- else %}
-PositionalParameter('{{element.value.name}}'{% if element.value.multiplicity and element.value.multiplicity != 1 %}, {{element.value.multiplicity}}{% endif %}){# TODO remove and when defaults #}
+{%- elif element|element_type == 'Parameter' %}
+	{%- if element.nonpositional -%}
+NonPositionalParameter('{{element.name}}'{% if element.multiplicity != 1 %}, {{element.multiplicity|stringify}}{% endif %})
+	{%- else -%}
+PositionalParameter('{{element.name}}'{% if element.multiplicity != 1 %}, {{element.multiplicity|stringify}}{% endif %})
 	{%- endif %}
 {%- endif %}
 {%- endmacro -%}
@@ -71,27 +71,39 @@ from cli_parser import CommandParserModel, BasicNonpositional, MultiArgNonpositi
 	
 root_command_name = '{{root_command_name}}'
 
+# -------------------- COMMAND MODEL DEFINITIONS --------------------
+
 command_models = {
 {%- for command in commands %}
 	'{{command.name}}' : CommandParserModel(
 		parameter_models=[
-		{%- for parameter in command.resolved_parameters %}
+		{%- for parameter in command.parameters %}
 			{%- if parameter.nonpositional %}
 			{{parameter|parameter_model}}
 			{%- endif %}
 		{%- endfor %}
 		],
 		usage_model={{ usages_model(command.usages)|tab_indent(2, start_from=2) }},
+		parameter_types={
+		{%- for name, value in parameter_types[command.name].items() %}
+			'{{name}}':'{{value}}', 
+		{%- endfor %}
+		},
 		default_values={
 		{%- for name, value in default_values[command.name].items() %}
-			'{{name}}':{% if value is string %}'{{value}}'{% else %}{{value}}{% endif %}, 
+			'{{name}}':{{value|stringify}}, 
+		{%- endfor %}
+		},
+		date_formats={
+		{%- for name, value in date_formats[command.name].items() %}
+			'{{name}}':'{{value}}', 
 		{%- endfor %}
 		},
 		{%- if command.sub_commands %}
-		sub_commands=[{% for sc in command.sub_commands %}{% if sc|element_type == 'CommandReference' %}{% set sc = sc.value %}{% endif %}{% if sc.cli_command %}('{{sc.name}}', '{{sc.cli_command}}'){% else %}'{{sc.name}}'{% endif %},{% endfor %}],
+		sub_commands=[{% for sc in command.sub_commands %}{% if sc.cli_command %}('{{sc.name}}', '{{sc.cli_command}}'){% else %}'{{sc.name}}'{% endif %},{% endfor %}],
 		{%- endif %}
 		{%- if cli_separators[command.name] %}
-		separators={{cli_separators[command.name]}}
+		separators={{cli_separators[command.name]}},
 		{%- endif %}
 		{%- if builtin_help_params[command.name] %}
 		builtin_help_params={{builtin_help_params[command.name]}},
