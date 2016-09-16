@@ -25,12 +25,8 @@ OptionalElement({{ cli_element(element.elements|first) }})
 	{%- endif %}
 {%- elif element|element_type == 'CliSeparator' -%}
 ParameterSeparator('{{element.value}}')
-{%- elif element|element_type == 'Parameter' %}
-	{%- if element.nonpositional -%}
-NonPositionalParameter('{{element.name}}'{% if element.multiplicity != 1 %}, {{element.multiplicity|stringify}}{% endif %})
-	{%- else -%}
-PositionalParameter('{{element.name}}'{% if element.multiplicity != 1 %}, {{element.multiplicity|stringify}}{% endif %})
-	{%- endif %}
+{%- elif element|element_type == 'Parameter' -%}
+parameters['{{element.id}}'].usage_model
 {%- endif %}
 {%- endmacro -%}
 
@@ -60,47 +56,59 @@ PositionalParameter('{{element.name}}'{% if element.multiplicity != 1 %}, {{elem
 {%- endif %}
 {%- endmacro -%}
 
+{%- macro parameter_usage_model(parameter) -%}
+{%- if parameter.nonpositional -%}
+NonPositionalParameter('{{parameter.name}}'{% if parameter.multiplicity != 1 %}, {{parameter.multiplicity|stringify}}{% endif %})
+{%- else -%}
+PositionalParameter('{{parameter.name}}'{% if parameter.multiplicity != 1 %}, {{parameter.multiplicity|stringify}}{% endif %})
+{%- endif %}
+{%- endmacro -%}
+
 {# ----------------- CODE START ----------------- #}
 '''
 Automatically generated code. Do not edit directly.
 '''
 
-from cli_parser import CommandParserModel, BasicNonpositional, MultiArgNonpositional, SeparatedNonpositional, \
+from cli_parser import CommandParserModel, ParameterModel, BasicNonpositional, MultiArgNonpositional, SeparatedNonpositional, \
 	CounterNonpositional,	BooleanNonpositional, ParameterGroup, OrGroup, OptionalElement, NonPositionalParameter, \
-	PositionalParameter, ParameterSeparator, SubCommand
+	PositionalParameter, ParameterSeparator, SubCommand, parse_cli_args as _parse_cli_args, invoke_commands as _invoke_commands, print_builtin_help as _print_builtin_help
 	
 root_command_name = '{{root_command_name}}'
 
+# -------------------- PARAMETER MODEL DEFINITIONS --------------------
+
+parameters = {
+{%- for parameter in parameters %}
+	'{{parameter.id}}' : ParameterModel(
+		name='{{parameter.name}}',
+		type='{{parameter.type}}',
+		usage_model={{parameter_usage_model(parameter)}},
+		default={{parameter.default|stringify}},
+		{%- if parameter.nonpositional %}
+		parser_models=[{{parameter|parameter_model}}],
+		{%- endif %}
+		{%- if parameter.date_format %}
+		date_format={{parameter.date_format|stringify}}
+		{%- endif %}
+	),
+{%- endfor %}
+}
+
 # -------------------- COMMAND MODEL DEFINITIONS --------------------
 
-command_models = {
+commands = {
 {%- for command in commands %}
 	'{{command.name}}' : CommandParserModel(
+		{%- if command.parameters %}
 		parameter_models=[
-		{%- for parameter in command.parameters %}
-			{%- if parameter.nonpositional %}
-			{{parameter|parameter_model}}
-			{%- endif %}
-		{%- endfor %}
+			{%- for parameter in command.parameters %}
+			parameters['{{parameter.id}}'],
+			{%- endfor %}
 		],
 		usage_model={{ usages_model(command.usages)|tab_indent(2, start_from=2) }},
-		parameter_types={
-		{%- for name, value in parameter_types[command.name].items() %}
-			'{{name}}':'{{value}}', 
-		{%- endfor %}
-		},
-		default_values={
-		{%- for name, value in default_values[command.name].items() %}
-			'{{name}}':{{value|stringify}}, 
-		{%- endfor %}
-		},
-		date_formats={
-		{%- for name, value in date_formats[command.name].items() %}
-			'{{name}}':'{{value}}', 
-		{%- endfor %}
-		},
+		{%- endif %}
 		{%- if command.sub_commands %}
-		sub_commands=[{% for sc in command.sub_commands %}{% if sc.cli_command %}('{{sc.name}}', '{{sc.cli_command}}'){% else %}'{{sc.name}}'{% endif %},{% endfor %}],
+		sub_commands=[{% for sc in command.sub_commands %}{% if sc.cli_command != sc.name %}('{{sc.name}}', '{{sc.cli_command}}'){% else %}'{{sc.cli_command}}'{% endif %}, {% endfor %}],
 		{%- endif %}
 		{%- if cli_separators[command.name] %}
 		separators={{cli_separators[command.name]}},
@@ -119,8 +127,46 @@ command_models = {
 {%- for command in commands %}
 
 # {{command.name}} usage_help
-command_models['{{command.name}}'].usage_help='''{{command.usage_help}}'''
+commands['{{command.name}}'].usage_help='''{{command.usage_help}}'''
 
 # {{command.name}} long_usage_help
-command_models['{{command.name}}'].long_usage_help='''{{command.long_usage_help}}'''
+commands['{{command.name}}'].long_usage_help='''{{command.long_usage_help}}'''
 {%- endfor %}
+
+# -------------------- ARGUMENT PARSING FUNCTIONS --------------------
+
+def get_cli_args():
+	import sys
+	return sys.argv[1:]
+	
+_annotated_callbacks = {}
+
+def command(func, name=None):
+	if name: 
+		_annotated_callbacks[name] = func
+	else:
+		_annotated_callbacks[func.__name__] = func
+	return func
+
+def parse_cli_args(args=None):
+	if args is None:
+		args = get_cli_args()
+	return _parse_cli_args(root_command_name, commands, args)
+	
+def invoke_commands(command_callbacks=None, args=None):
+	if args is None:
+		args = get_cli_args()
+	if command_callbacks is None:
+		command_callbacks = _annotated_callbacks
+	_invoke_commands(command_callbacks, root_command_name, commands, args)
+
+def print_builtin_help(args=None):
+	if args is None:
+		args = get_cli_args()
+	_print_builtin_help(root_command_name, commands, args)
+
+if __name__ == '__main__':
+	def get_print_callback(name):
+		return lambda args, sub_command: print(name, 'callback:', '\n\t{args}\n\tsub_command: {sub_command}'.format(args=args, sub_command=sub_command))
+	
+	invoke_commands({c:get_print_callback(c) for c in commands.keys()})

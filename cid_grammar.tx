@@ -26,8 +26,8 @@ Command:
     ('commands:' '{' sub_commands+=SubCommand '}')|
     ('constraints:' constraints=CodeBlock)|
     ('cli_command:' cli_command=STRING)|
-	('help_params:' help_params+=STRING[','])|
-	('long_help_params:' long_help_params+=STRING[','])|
+	('help_params:' help_params+=STRING[',']|no_help?='None')|
+	('long_help_params:' long_help_params+=STRING[',']|no_long_help?='None')|
     ('usage:' (usages+=CliStructureMultiLine)|(usage=CliStructure))|
     ('gui:' gui=GuiStructure))+
   )?

@@ -55,22 +55,31 @@ TODO:
 	
 from collections import namedtuple
 import datetime
+from functools import reduce
+from operator import add
 
 class CommandParserModel:
-	def __init__(self, parameter_models, usage_model, parameter_types, default_values, date_formats={}, 
-			usage_help='', long_usage_help='', sub_commands=[], separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
-		self.parameter_models = parameter_models
+	def __init__(self, parameter_models=[], usage_model=None, usage_help='', long_usage_help='', sub_commands=[], separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
+		self.parameter_models = {m.name:m for m in parameter_models}
+		nonpositional_models = [p.parser_models for p in parameter_models if p.parser_models]
+		self.parameter_parser_models = reduce(add, [p.parser_models for p in parameter_models if p.parser_models]) if nonpositional_models else []
 		self.usage_model = usage_model
-		self.parameter_types = parameter_types
-		self.date_formats = date_formats
 		self.sub_commands = sub_commands
 		self.separators = separators
-		self.default_values = default_values
 		self.usage_help = usage_help
 		self.long_usage_help = long_usage_help
 		self.builtin_help_params = builtin_help_params
 		self.builtin_long_help_params = builtin_long_help_params
-
+		
+class ParameterModel:
+	def __init__(self, name, type, usage_model, default, parser_models=None, date_format=None):
+		self.name = name
+		self.type = type
+		self.usage_model = usage_model
+		self.default = default
+		self.parser_models = parser_models
+		self.date_format = date_format
+		
 class MatchedArgument:
 	def __init__(self, name, value):
 		self.name = name
@@ -88,28 +97,11 @@ class MatchedArgument:
 			val = self.value
 		return "<{name} = {value}>".format(name=self.name, value=val)
 		
-def is_iterable(obj):
-	return hasattr(obj, '__iter__') and not isinstance(obj, str)
-		
-def convert_data(data, type, date_format=''):
-	if is_iterable(data):
-		return [convert_data(element, type, date_format) for element in data]
-	elif isinstance(data, str):
-		if type == "Num":
-			try:
-				return int(data_str)
-			except ValueError:
-				return float(data_str)
-		elif type == "Date":
-			return datetime.strptime(data_str, date_format)
-	else:
-		return data
-		
 # --------------------- NONPOSITIONAL ARGUMENT PARSER ---------------------
 
 class NonpositionalArgumentParser:
-	def __init__(self, parameter_models=[], sub_commands=[], separators=['--']):
-		self.parameter_models = parameter_models
+	def __init__(self, parameter_parser_models=[], sub_commands=[], separators=['--']):
+		self.parameter_parser_models = parameter_parser_models
 		self.sub_commands = {}
 		for sub_command in sub_commands:
 			if isinstance(sub_command, str):
@@ -128,7 +120,7 @@ class NonpositionalArgumentParser:
 		return None, None, args
 	
 	def match_nonpositional(self, args):
-		for model in self.parameter_models:
+		for model in self.parameter_parser_models:
 			match, args_to_match = model.match(args, self)
 			if match is not None:
 				return MatchedArgument(model.name, match), args_to_match
@@ -465,7 +457,7 @@ def parse_cli_args(root_command_name, command_models, args):
 	while command_name:
 		if args_to_match: # there are more arguments
 			command_model = command_models[command_name]
-			parser = NonpositionalArgumentParser(command_model.parameter_models, command_model.sub_commands, command_model.separators)
+			parser = NonpositionalArgumentParser(command_model.parameter_parser_models, command_model.sub_commands, command_model.separators)
 			matched_nonpositionals, positional_args, separator, sub_command, args_to_match = parser.parse_arguments(args_to_match)
 		else: # no more arguments, just add the last command and finish
 			matched_nonpositionals = []
@@ -485,15 +477,53 @@ def parse_cli_args(root_command_name, command_models, args):
 		
 		all_matched_args = command.matched_nonpositionals + matched_positionals # matched positional and nonpositional args
 		matched_names = [matched.name for matched in all_matched_args] # names of all matched args
-		for missing_arg in [arg_name for arg_name in command_model.default_values if arg_name not in matched_names]: # for all args in defaults not present in matched args
-			all_matched_args.append(MatchedArgument(missing_arg, command_model.default_values[missing_arg])) # add default values
+		for missing_arg in [p for p in command_model.parameter_models.values() if p.name not in matched_names]: # for all args not present in matched args
+			all_matched_args.append(MatchedArgument(missing_arg.name, missing_arg.default)) # add default values
 		
-		all_matched_args = [convert_data(arg, command_model.parameter_types[arg.name], command_model.date_formats.get(arg.name, None)) for arg in all_matched_args]
+		all_matched_args = [convert_data(arg, command_model.parameter_models[arg.name]) for arg in all_matched_args]
 		
 		matched_args[command_name] = CommandArgs(all_matched_args, command.sub_command)
 	
 	return matched_args
 	
+def is_iterable(obj):
+	return hasattr(obj, '__iter__') and not isinstance(obj, str)
+	
+def convert_data(data, model):
+	if is_iterable(data):
+		return [convert_data(element, model) for element in data]
+	elif isinstance(data, str):
+		if model.type == "Num":
+			try:
+				return int(data_str)
+			except ValueError:
+				return float(data_str)
+		elif model.type == "Date":
+			return datetime.strptime(data_str, model.date_format)
+		elif model.type == "Bool":
+			return {"true":True, "false":False}[data.lower()]
+	else:
+		return data
+	
+def invoke_commands(command_callbacks, root_command_name, command_models, args):
+	if isinstance(command_callbacks, list):
+		command_callbacks = {f.__name__ : f for f in command_callbacks}
+	
+	if print_builtin_help(root_command_name, command_models, args):
+		return
+	
+	matched_args = parse_cli_args(root_command_name, command_models, args) # TODO convert to primitive values based on param type
+	
+	command_name = root_command_name
+	while command_name:
+		command = matched_args[command_name]
+		command_model = command_models[command_name]
+		if command:
+			command_callbacks[command_name](command.args, command.sub_command)
+			command_name = command.sub_command
+		else:
+			raise Exception('No callback provided for command: {}'.format(command_name))
+			
 def print_builtin_help(root_command_name, command_models, args):
 	if not args:
 		return False
@@ -528,25 +558,6 @@ def print_builtin_help(root_command_name, command_models, args):
 		return True
 	else:
 		return False
-	
-def invoke_commands(command_callbacks, root_command_name, command_models, args):
-	if isinstance(command_callbacks, list):
-		command_callbacks = {f.__name__ : f for f in command_callbacks}
-	
-	if print_builtin_help(root_command_name, command_models, args):
-		return
-	
-	matched_args = parse_cli_args(root_command_name, command_models, args) # TODO convert to primitive values based on param type
-	
-	command_name = root_command_name
-	while command_name:
-		command = matched_args[command_name]
-		command_model = command_models[command_name]
-		if command:
-			command_callbacks[command_name](command.args, command.sub_command)
-			command_name = command.sub_command
-		else:
-			raise Exception('No callback provided for command: {}'.format(command_name))
 
 	
 # ------------------------------ TO BE GENERATED DATA ------------------------------

@@ -1,4 +1,7 @@
-{%- if command.description %}{{ command.description }}{% endif -%}
+{%- if command.description -%}
+{{ command.description }}
+
+{% endif -%}
 Usage:{% if command.usages|length == 1 %}  {{command.cli_command}} {{command.usages[0].string_repr}}{% else %}
 {%- for usage in command.usages %}
   {{command.cli_command}} {{usage.string_repr}}
