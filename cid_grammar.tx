@@ -8,8 +8,8 @@ ImportStatement:
   'import' path=ImportReference ('as' alias=ImportReference)?
 ;
 
-ImportReference:
-  '/'elements+=/\w+/['/']
+ImportReference[noskipws]:
+  /\s*/ '/'elements+=/[\w^\n]+/['/']
 ;
 
 ScriptElement:

@@ -2,11 +2,7 @@
 {{ command.description }}
 
 {% endif -%}
-Usage:{% if command.usages|length == 1 %}  {{command.cli_command}} {{command.usages[0].string_repr}}{% else %}
-{%- for usage in command.usages %}
-  {{command.cli_command}} {{usage.string_repr}}
-{%- endfor %}
-{%- endif %}
+Usage:{{ command.usages|usage_lines_repr(command_str) }}
 {%- if command.parameters or command.help_params %}
 
 Parameters:
