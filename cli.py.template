@@ -1,0 +1,210 @@
+{%- macro cli_element(element) %}
+{%- if element|element_type == 'CliOrGroup' -%}
+OrGroup([
+	{%- for or_el in element.elements %}
+{{ cli_element(or_el)|tab_indent }},
+	{%- endfor %}
+])
+{%- elif element|element_type == 'CodeBlock' %}
+	{{- raise("Cannot create a parser for a codeblock in the command usage pattern.") }}
+{%- elif element|element_type == 'CliGroup' -%}
+ParameterGroup([
+	{%- for el in element.elements %}
+{{ cli_element(el)|tab_indent }},
+	{%- endfor %}
+])
+{%- elif element|element_type == 'CliOptionalGroup' -%}
+	{%- if element.elements|length > 1 %}
+OptionalElement(ParameterGroup([
+		{%- for el in element.elements %}
+{{ cli_element(el)|tab_indent }},
+		{%- endfor %}
+]))
+	{%- else -%}
+OptionalElement({{ cli_element(element.elements|first) }})
+	{%- endif %}
+{%- elif element|element_type == 'CliSeparator' -%}
+ParameterSeparator('{{element.value}}')
+{%- elif element|element_type == 'Parameter' -%}
+parameters['{{element.id}}'].usage_model
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro usage_model(usage) %}ParameterGroup([
+	{%- for element in usage.elements %}
+{{ cli_element(element)|tab_indent }},
+	{%- endfor %}
+	{%- if usage.has_options %}
+		{%- for element in TODO %}
+	OptionalElement({{TODO}}), # TODO
+		{%- endfor %}
+	{%- endif %}
+	{%- if usage.has_subcommand %}
+	SubCommand(),
+	{%- endif %}
+])
+{%- endmacro -%}
+
+{%- macro usages_model(usages) %}
+{%- if usages|length > 1 %}OrGroup([
+	{%- for usage in usages %}
+		{{-'\n'}}{{- usage_model(usage)|tab_indent }},
+	{%- endfor %}
+])
+{%- else %}
+{{- usage_model(usages|first) }}
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro parameter_usage_model(parameter) %}
+{%- if parameter.nonpositional -%}
+NonPositionalParameter('{{parameter.name}}'{% if parameter.multiplicity != 1 %}, multiplicity={{parameter.multiplicity|stringify}}{% endif %})
+{%- else -%}
+PositionalParameter('{{parameter.name}}'{% if parameter.multiplicity != 1 %}, multiplicity={{parameter.multiplicity|stringify}}{% endif %})
+{%- endif %}
+{%- endmacro -%}
+
+{# ----------------- CODE START ----------------- #}
+'''
+Automatically generated code. Do not edit directly.
+'''
+
+from generic_cli_parser import CommandParserModel, ParameterModel, BasicNonpositional, MultiArgNonpositional, SeparatedNonpositional, \
+	CounterNonpositional,	BooleanNonpositional, ParameterGroup, OrGroup, OptionalElement, NonPositionalParameter, \
+	PositionalParameter, ParameterSeparator, SubCommand, parse_cli_args as _parse_cli_args, invoke_commands as _invoke_commands, print_builtin_help as _print_builtin_help
+	
+root_command_name = '{{root_command_name}}'
+root_command_id = '{{root_command_id}}'
+
+# -------------------- PARAMETER MODEL DEFINITIONS --------------------
+
+parameters = {
+{%- for parameter in parameters %}
+	'{{parameter.id}}' : ParameterModel(
+		name='{{parameter.name}}',
+		type='{{parameter.type}}',
+		usage_model={{parameter_usage_model(parameter)}},
+		default={{parameter.default|stringify}},
+		{%- if parameter.nonpositional %}
+		parser_models=[{{parameter|parameter_model}}],
+		{%- endif %}
+		{%- if parameter.date_format %}
+		date_format={{parameter.date_format|stringify}},
+		{%- endif %}
+		{%- if parameter.cli_pattern_vars %}
+		cli_pattern_vars={{parameter.cli_pattern_vars}},
+		{%- endif %}
+	),
+{%- endfor %}
+}
+
+# -------------------- COMMAND MODEL DEFINITIONS --------------------
+
+commands = {
+{%- for command in commands %}
+	'{{command.id}}' : CommandParserModel(
+		id='{{command.id}}',
+		name='{{command.name}}',
+		cli_command='{{command.cli_command}}',
+		{%- if command.parameters %}
+		parameter_models=[
+			{%- for parameter in command.parameters %}
+			parameters['{{parameter.id}}'],
+			{%- endfor %}
+		],
+		{%- endif %}
+		usage_model={{ usages_model(command.usages)|tab_indent(2, start_from=2) }},
+		{%- if command.cli_separators %}
+		separators={{command.cli_separators}},
+		{%- endif %}
+		{%- if command.help_params %}
+		builtin_help_params={{command.help_params}},
+		{%- endif %}
+		{%- if command.long_help_params %}
+		builtin_long_help_params={{command.long_help_params}},
+		{%- endif %}
+	),
+{%- endfor %}
+}
+
+{%- if commands|have_sub_commands %}
+# -------------------- SUB COMMANDS --------------------
+{% for command in commands %}
+	{%- if command.sub_commands %}
+commands['{{command.id}}'].sub_commands = [{% for sc in command.sub_commands %}commands['{{sc.id}}'], {% endfor %}]
+	{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+# -------------------- COMMAND USAGE HELP --------------------
+{%- for command in commands %}
+
+# {{command.id}} usage_help
+commands['{{command.id}}'].usage_help = '''{{command.usage_help}}'''
+
+# {{command.id}} long_usage_help
+commands['{{command.id}}'].long_usage_help = '''{{command.long_usage_help}}'''
+{%- endfor %}
+
+# -------------------- ARGUMENT PARSING FUNCTIONS --------------------
+
+def get_cli_args():
+	import sys
+	return sys.argv[1:]
+	
+_annotated_callbacks = None
+
+class command:
+	def __init__(self, name=None, parent=None):
+		self.name = name
+		self.parent = parent
+		
+	def __call__(self, func):
+		if not hasattr(func, 'sub_commands'):
+			func.sub_commands = {}
+		if not self.name:
+			self.name = func.__name__
+			
+		if not self.parent:
+			if _annotated_callbacks:
+				raise Exception("More than one root command encountered.")
+			else:
+				_annotated_callbacks = func, func.sub_commands
+		else:
+			self.parent.sub_commands[self.name] = func, func.sub_commands
+		
+def command(func, name=None, parent=None):
+	if name:
+		_annotated_callbacks[name] = func
+	else:
+		_annotated_callbacks[func.__name__] = func
+	return func
+
+def parse_cli_args(args=None):
+	if args is None:
+		args = get_cli_args()
+	return _parse_cli_args(root_command_id, commands, args)
+	
+def invoke_commands(command_callbacks=None, args=None):
+	if args is None:
+		args = get_cli_args()
+	if not command_callbacks:
+		if not _annotated_callbacks:
+			raise Exception("No callbacks provided.")
+		command_callbacks = _annotated_callbacks
+	_invoke_commands(command_callbacks, root_command_id, commands, args)
+
+def print_builtin_help(args=None):
+	if args is None:
+		args = get_cli_args()
+	_print_builtin_help(root_command_id, commands, args)
+
+if __name__ == '__main__':
+	def get_print_callbacks(command):
+		callback = lambda args: print('{}:'.format(command.name), '\n   ', args, '\n')
+		if command.sub_commands:
+			return callback, {c.name:get_print_callbacks(c) for c in command.sub_commands}
+		else:
+			return callback
+	
+	invoke_commands(get_print_callbacks(commands[root_command_id]))

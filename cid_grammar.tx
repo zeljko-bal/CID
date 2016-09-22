@@ -211,12 +211,12 @@ GuiStructure:
 ;
 
 GuiElement:
-  GuiTabs|GuiSection|GuiStack|GuiGrid|ParameterReference
+  GuiTabs|GuiSectionGroup|GuiSection|GuiStack|GuiGrid|ParameterReference
 ;
 
 GuiTabs:
   'tabs:'
-    tabs+=GuiTab
+    elements+=GuiTab
 ;
 
 GuiTab:
@@ -226,8 +226,18 @@ GuiTab:
   '}'
 ;
 
+GuiSectionGroup:
+  'sections:'
+  exclusive?='exclusive'
+  '{'
+    elements+=GuiSection
+  '}'
+;
+
 GuiSection:
   'section' (title=STRING)? ':'
+  ((expanded?='expanded')|
+   (optional?='optional'))*
   '{'
     body=GuiStructure
   '}'
@@ -239,11 +249,11 @@ GuiStack:
 
 GuiGrid:
   "grid:"
-    rows+=GuiGridRow
+    elements+=GuiGridRow
 ;
 
 GuiGridRow:
-  '[' elements*=GuiGridCell['|'] ']'
+  '[' elements+=GuiGridCell['|'] ']'
 ;
 
 GuiGridCell:

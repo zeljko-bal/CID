@@ -1,0 +1,273 @@
+
+{%- macro gui_structure(structure) %}
+<table>
+	{%- for element in structure.elements %}
+	<tr>
+		{{gui_element(element)}}
+	</tr>
+	{%- endfor %}
+</table>
+{%- endmacro -%}
+
+{%- macro gui_element(element) %}
+{%- if element|element_type == 'GuiTabs' %}
+GuiTabs
+{%- elif element|element_type == 'GuiSectionGroup' %}
+<td>
+	<ul class="collapsible{% if element.exclusive %} popout{% endif %}" data-collapsible="{% if element.exclusive %}accordion{% else %}expandable{% endif %}">
+		{%- for section in element.elements %}
+		<li>
+			<div class="collapsible-header{% if element.exclusive %} exclusive-section{% endif %}{% if section.expanded %} active{% endif %}"><i class="material-icons">{% if not element.exclusive %}toc{% else %}{% if section.expanded %}check_circle{% else %}radio_button_unchecked{% endif %}{% endif %}</i>{{section.title}}</div>
+			<div class="collapsible-body">
+				{{gui_structure(section.body)}}
+			</div>
+		</li>
+		{%- endfor %}
+	</ul>
+</td>
+{%- elif element|element_type == 'GuiSection' %}
+<td>
+	<ul class="collapsible" data-collapsible="expandable">
+		<li>
+			<div class="collapsible-header{% if element.expanded %} active{% endif %}{% if element.optional %} optional-section{% endif %}"><i class="material-icons">{% if not element.optional %}toc{% else %}{% if element.expanded %}check_circle{% else %}radio_button_unchecked{% endif %}{% endif %}</i>{{element.title}}</div>
+			<div class="collapsible-body">
+				{{gui_structure(element.body)}}
+			</div>
+		</li>
+	</ul>
+</td>
+{%- elif element|element_type == 'GuiStack' %}
+GuiStack
+{%- elif element|element_type == 'GuiGrid' %}
+GuiGrid
+{%- elif element|element_type == 'Parameter' %}
+	{%- if element.type == 'Str' %}
+<td class="input-field">
+	<input id="{{element.id}}" type="text" class="validate"/>
+	<label for="{{element.id}}">{{element.title}}</label>
+</td>
+	{%- elif element.type == 'Num' %}
+<td class="input-field">
+	<div class="number-input-wrapper">
+		<input id="{{element.id}}" type="number" class="validate"/>
+		<label for="{{element.id}}">{{element.title}}</label>
+	</div>
+</td>
+	{%- elif element.type == 'Bool' %}
+<td style="width: 1%;">
+	{% set cb_id = element.id|unique_id %}
+	<input type="checkbox" id="{{cb_id}}" />
+	<label for="{{cb_id}}">{{element.title}}</label>
+</td>
+	{%- elif element.type == 'Date' %}
+<td class="input-field">
+	<input id="{{element.id}}" type="date" class="datepicker">
+	<label for="{{element.id}}">{{element.title}}</label>
+</td>
+	{%- elif element.type == 'File' %}
+<td class="file-field input-field">
+	<div class="btn">
+		<span>{{element.title}}</span>
+		<input type="file">
+	</div>
+	<div class="file-path-wrapper">
+		<input id="{{element.id}}" class="file-path validate" type="text">
+	</div>
+</td>
+	{%- elif element.type == 'Choice' %}
+<td class="input-field">
+	<select>
+		<option value="" disabled selected>Choose..</option>
+		<option value="0">{{'asd'}}</option>
+		{%- for choice in element.choices %}
+		<option value="{{loop.index}}">{{choice}}</option>
+		{%- endfor %}
+	</select>
+	<label>{{element.title}}</label>
+</td>
+	{%- endif %}
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro gui_section(section) %}
+
+
+{%- endmacro -%}
+
+
+<!DOCTYPE html>
+<html>
+    <head>
+		<!--Import Google Icon Font-->
+		<link href="materialize/css/material-icons.css" rel="stylesheet">
+		<!--Import materialize.css-->
+		<link type="text/css" rel="stylesheet" href="materialize/css/materialize.css"  media="screen,projection"/>
+	</head>
+    <body>
+		<style>
+			nav
+			{
+				background-color: #bdbdbd;
+				line-height: 36px;
+				height: 36px;
+				margin-bottom: 35px;
+			}
+			tr.has-textarea td
+			{
+				vertical-align: top;
+			}
+			.collapsible-body, .tab-body
+			{
+				padding-top: 25px;
+			}
+			.switch label .lever
+			{
+				margin: 0px;
+			}
+			
+			input[type=number]::-webkit-inner-spin-button
+			{ 
+				height:40px;
+			}
+			
+			.number-input-wrapper
+			{
+				max-width:15em;
+			}
+		</style>
+		<div class="container">
+			<h4>{{root_command_name}}</h2>
+			{%- for command in commands %}
+			<div id="{{command.id}}" class="command-panel"{% if command.id != root_command_id %} style="display:none;"{% endif %}>
+				{%- if command.id != root_command_id %}
+				<nav>
+					{%- for parent_command in command|all_parent_commands %}
+					<a href="#{{parent_command.id}}" class="parent-command-link breadcrumb">{{parent_command.title}}</a>
+					{%- endfor %}
+					<a href="#!" class="breadcrumb">{{command.title}}</a>
+				</nav>
+				{%- else %}
+				<hr/>
+				{%- endif %}
+				{%- if command.description %}
+				<div class="command-description">
+					<p>{{command.description}}</p>
+				</div>
+				{%- endif %}
+				{{gui_structure(command.gui)}}
+			</div>
+			{%- endfor %}
+		</div>
+		<br/><br/><br/><br/><br/><br/><br/><br/><br/>
+		
+		<!-- Script imports -->
+		<!-- script-import hack for electron, http://stackoverflow.com/questions/32621988/electron-jquery-is-not-defined -->
+		<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+		
+		<!--Import jQuery before materialize.js-->
+		<!-- jQuery -->
+		<script type="text/javascript" src="materialize/js/jquery-2.1.1.min.js"></script>
+		<!-- Include all compiled bootstrap plugins -->
+		<script type="text/javascript" src="materialize/js/materialize.min.js"></script>
+		
+		<!-- script-import hack for electron -->
+		<script>if (window.module) module = window.module;</script>
+	</body>
+	
+	<script>
+		// You can also require other files to run in this process
+		require('./renderer.js');
+		
+		// ------------------- PARENT COMMANDS -------------------
+		
+		function toggle_command_panel(command_id)
+		{
+			var command_panels = $(".command-panel");
+			
+			for(var i=0; i<command_panels.length; i++)
+			{
+				command_panel = command_panels[i];
+				
+				if(command_panel.id == command_id)
+				{
+					$(command_panel).show();
+				}
+				else
+				{
+					$(command_panel).hide();
+				}
+			}
+		}
+		
+		function cmd_link_click_handler(event)
+		{
+			alert(event.target);
+			command_id = event.data;
+			toggle_command_panel(command_id);
+		}
+		$('.parent-command-link').click(cmd_link_click_handler);
+		/*
+		$('#cmd1_link').click('cmd1', cmd_link_click_handler);
+		$('#sub1_link').click('sub1', cmd_link_click_handler);
+		$('#sub2_link').click('sub2', cmd_link_click_handler);
+		*/
+		
+		// ------------------- MATERIALIZE INIT -------------------
+		
+		$('.datepicker').pickadate({
+			selectMonths: true, // Creates a dropdown to control month
+			selectYears: 15 // Creates a dropdown of 15 years to control year
+		});
+		
+		$('select').material_select();
+		
+		// ------------------- SECTION ICONS -------------------
+		
+		var activated_icon = 'check_circle';
+		var deactivated_icon = 'radio_button_unchecked';
+		
+		function toggle_section_group_icons(event)
+		{
+			var current_section = $(event.delegateTarget);
+			var section_group = current_section.parent().parent();
+			
+			var sections = section_group.children('li').children('div.collapsible-header');
+			
+			for(var i=0; i<sections.length; i++)
+			{
+				other_section = $(sections[i]);
+				
+				if(!other_section.is(current_section))
+				{
+					other_section.children('i').text(deactivated_icon);
+				}
+			}
+			
+			if(current_section.hasClass('active'))
+			{
+				event.stopPropagation();
+			}
+			else
+			{
+				current_section.children('i').text(activated_icon);
+			}
+		}
+		
+		function toggle_section_icon(event)
+		{
+			var current_section = $(event.delegateTarget);
+			if(current_section.hasClass('active'))
+			{
+				current_section.children('i').text(deactivated_icon);
+			}
+			else
+			{
+				current_section.children('i').text(activated_icon);
+			}
+		}
+		
+		$('.collapsible-header.exclusive-section').click(toggle_section_group_icons);
+		$('.collapsible-header.optional-section').click(toggle_section_icon);
+		
+	</script>
+</html>

@@ -1,0 +1,85 @@
+
+import /example2/external_option1 as /exo1
+import /example2/external_option2
+
+Bool outer_option1:
+	cli: "--outer-option1", "-oo1|-noo1"
+
+Cmd command1 "Command1":
+	help: "help"
+	description: "Command 1, Command 1, does whatever command 1 does."
+	parameters:
+	{
+		/exo1
+		/example2/external_option2
+		outer_option1
+		
+		Num counter_par:
+			cli: "-{count:v}"
+			
+		Num num_par1:
+			cli: "--num_par1={}"
+		
+		Str str_par1 "String param 1":
+			description: "Custom description. {default_desc} And so on.."
+			help: "Help about str_par1."
+			default: "default val"
+			none_value: Allowed
+			multiplicity: 2
+			cli: "--par1 {}", "-p1={}"
+		
+		Str str_par_default_None:
+			default: None
+			cli: "--def-none={}"
+		
+		Date date_par:
+			cli: "--date={}"
+			
+		File file_par:
+			cli: "--file-par={}"
+			
+		Choice choice_par:
+			cli: "--choice-par={}"
+			choices: "choice1", "choice2"
+		
+		Num tuple_par:
+			cli: "--tuple-par {'x', 'y'}", "-tp {2}"
+			
+		Str many_par:
+			cli: "--many-par {*}"
+			
+		Str separated_par:
+			cli: "--sep-par {*|,}"
+			
+		Str positional1
+		Str positional_many:
+			multiplicity: *
+	}
+	usage: 
+		- [/exo1] [/example2/external_option2] outer_option1 positional1 -- positional_many
+		- str_par1 outer_option1 {sub_command}
+		- [str_par_default_None] [date_par] file_par|choice_par (tuple_par many_par)|separated_par
+	commands:
+	{
+		Sub sub1 "Sub command 1":
+			parameters:
+			{
+				Bool inner_opt:
+					cli: "--inner-opt"
+			}
+		Sub sub2:
+			parameters:
+			{
+				outer_option1
+			}
+		Sub sub3:
+			description: "Description for command 3"
+			parameters:
+			{
+				outer_option1
+				Bool help:
+					cli: "--help"
+			}
+			cli_command: "subcommand3"
+		Sub sub4
+	}
