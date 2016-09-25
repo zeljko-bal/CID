@@ -23,11 +23,12 @@ class ModelProcessor:
 						if isinstance(existing, list):
 							existing.append(value)
 						else:
-							existing = [existing, value]
+							self.callbacks[key] = [existing, value]
 					else:
 						self.callbacks[key] = value
 		else:
 			self.callbacks = callbacks
+		
 		self.allow_revisiting = allow_revisiting
 		self.parent_stack = []
 		self.visited = []
@@ -125,8 +126,6 @@ class ModelProcessor:
 					self.process_gui_element(section)
 			elif element_type(gui_element) == 'GuiSection':
 				self.process_gui_structure(gui_element.body)
-			elif element_type(gui_element) == 'GuiStack':
-				self.process_gui_grid_row(gui_element.body)
 			elif element_type(gui_element) == 'GuiGrid':
 				for row in gui_element.elements:
 					self.process_gui_grid_row(row)

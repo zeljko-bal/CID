@@ -45,8 +45,13 @@ Cmd command1 "Command1":
 		Num tuple_par:
 			cli: "--tuple-par {'x', 'y'}", "-tp {2}"
 			
+		Str tuple_par2:
+			cli: "--tuple-par2 {'xx', 'yy'}", "-tp2 {2}"
+			none_value: Allowed
+			
 		Str many_par:
 			cli: "--many-par {*}"
+			#none_value: Allowed
 			
 		Str separated_par:
 			cli: "--sep-par {*|,}"
@@ -58,7 +63,10 @@ Cmd command1 "Command1":
 	usage: 
 		- [/exo1] [/example2/external_option2] outer_option1 positional1 -- positional_many
 		- str_par1 outer_option1 {sub_command}
-		- [str_par_default_None] [date_par] file_par|choice_par (tuple_par many_par)|separated_par
+		- [str_par_default_None date_par] file_par|choice_par (tuple_par tuple_par2 many_par)|separated_par
+#	gui:
+#		grid: [/exo1             |outer_option1|str_par_default_None|file_par  ]
+#		grid: [/example2/external_option2         |   str_par1    |>>|positional_many]
 	commands:
 	{
 		Sub sub1 "Sub command 1":

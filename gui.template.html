@@ -3,105 +3,233 @@
 <table>
 	{%- for element in structure.elements %}
 	<tr>
-		{{gui_element(element)}}
+		{{ gui_element(element)|tab_indent(2) }}
 	</tr>
 	{%- endfor %}
 </table>
 {%- endmacro -%}
 
 {%- macro gui_element(element) %}
-{%- if element|element_type == 'GuiTabs' %}
-GuiTabs
-{%- elif element|element_type == 'GuiSectionGroup' %}
+{%- if element|element_type == 'GuiTabs' -%}
+<td class="z-depth-1">
+	<ul id = "{{'tabs'|new_unique_id}}" class="tabs">
+		{%- for tab in element.elements %}
+		<li class="tab"><a{% if loop.index == 1%} class="active"{% endif %} href="#{{'tabs'|current_unique_id}}_{{loop.index}}">{{tab.title}}</a></li>
+		{%- endfor %}
+	</ul>
+	{%- for tab in element.elements %}
+	<div class="tab-body" id="{{'tabs'|current_unique_id}}_{{loop.index}}">
+		{{ gui_structure(tab.body)|tab_indent }}
+	</div>
+	{%- endfor %}
+</td>
+{%- elif element|element_type == 'GuiSectionGroup' -%}
 <td>
 	<ul class="collapsible{% if element.exclusive %} popout{% endif %}" data-collapsible="{% if element.exclusive %}accordion{% else %}expandable{% endif %}">
 		{%- for section in element.elements %}
 		<li>
 			<div class="collapsible-header{% if element.exclusive %} exclusive-section{% endif %}{% if section.expanded %} active{% endif %}"><i class="material-icons">{% if not element.exclusive %}toc{% else %}{% if section.expanded %}check_circle{% else %}radio_button_unchecked{% endif %}{% endif %}</i>{{section.title}}</div>
 			<div class="collapsible-body">
-				{{gui_structure(section.body)}}
+				{{ gui_structure(section.body)|tab_indent }}
 			</div>
 		</li>
 		{%- endfor %}
 	</ul>
 </td>
-{%- elif element|element_type == 'GuiSection' %}
+{%- elif element|element_type == 'GuiSection' -%}
 <td>
 	<ul class="collapsible" data-collapsible="expandable">
 		<li>
 			<div class="collapsible-header{% if element.expanded %} active{% endif %}{% if element.optional %} optional-section{% endif %}"><i class="material-icons">{% if not element.optional %}toc{% else %}{% if element.expanded %}check_circle{% else %}radio_button_unchecked{% endif %}{% endif %}</i>{{element.title}}</div>
 			<div class="collapsible-body">
-				{{gui_structure(element.body)}}
+				{{ gui_structure(element.body)|tab_indent }}
 			</div>
 		</li>
 	</ul>
 </td>
-{%- elif element|element_type == 'GuiStack' %}
-GuiStack
-{%- elif element|element_type == 'GuiGrid' %}
-GuiGrid
-{%- elif element|element_type == 'Parameter' %}
-	{%- if element.type == 'Str' %}
-<td class="input-field">
-	<input id="{{element.id}}" type="text" class="validate"/>
-	<label for="{{element.id}}">{{element.title}}</label>
+{%- elif element|element_type == 'GuiGrid' -%}
+<td>
+	<table>
+		{%- for row in element.elements %}
+		{{ gui_grid_row(row)|tab_indent }}
+		{%- endfor %}
+	</table>
+</td>
+{%- elif element|element_type == 'Parameter' -%}
+{{ gui_parameter(element)|tab_indent }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro gui_parameter(element, colspan=1, width=0) %}
+{%- if width %}{% set width_str = ' style="width: '~width~'%;"' %}{% else %}{% set width_str = '' %}{% endif %}
+{%- if colspan > 1 %}{% set span_str = ' colspan="'~colspan~'"' %}{% else %}{% set span_str = '' %}{% endif %}
+{%- if element.type == 'Str' %}
+<td{{span_str}}{{width_str}}>
+	{%- if not element.nonpositional or element.cli_pattern_count == 1 %}
+	<div class="input-field">
+		{%- if element.none_value_allowed %}
+		<div class="none-switch switch prefix">
+			<label>
+				<input id="{{element.id}}_none_switch" type="checkbox"{% if element.default != None %} checked{% endif %}/>
+				<span class="lever"></span>
+			</label>
+		</div>
+		{%- endif %}
+		<input id="{{element.id}}" type="text"{% if element.default == None %} disabled{% endif %}/>
+		<label for="{{element.id}}">{{element.title}}</label>
+	</div>
+	{%- elif element.cli_pattern_count == '*' %}
+	<table>
+		<tr>
+			{%- if element.none_value_allowed %}
+			<td style="width:40px;">
+				<div class="none-switch switch" style="left:15px;top:20px;">
+					<label>
+						<input id="{{element.id}}_none_switch" type="checkbox"{% if element.default != None %} checked{% endif %}/>
+						<span class="lever"></span>
+					</label>
+				</div>
+			</td>
+			{%- endif %}
+			<td>
+				<div class="input-field">
+					<input id="{{element.id}}:0" data-param-count="0" type="text"{% if element.default == None %} disabled{% endif %}/>
+					<label for="{{element.id}}:0">{{element.title}}</label>
+					<a href="#!" class="secondary-content add-input-field" style="position:relative; bottom:50px;"><i class="material-icons">add</i></a>
+				</div>
+			</td>
+		</tr>
+	</table>
+	{%- elif element.cli_pattern_count > 1 %}
+	<table>
+		{% for i in range(0, element.cli_pattern_count) %}
+		<tr>
+			{%- if element.none_value_allowed %}
+			<td style="width:40px;">
+				{%- if i == 0 %}
+				<div class="none-switch switch" style="left:15px;top:20px;">
+					<label>
+						<input id="{{element.id}}_none_switch" type="checkbox"{% if element.default != None %} checked{% endif %}/>
+						<span class="lever"></span>
+					</label>
+				</div>
+				{%- endif %}
+			</td>
+			{%- endif %}
+			<td>
+				<div class="input-field">
+					<input id="{{element.id}}:{{i}}" data-param-count="{{i}}" type="text"{% if element.default == None %} disabled{% endif %}/>
+					<label for="{{element.id}}:{{i}}">{{element.title}} : {% if element.cli_pattern_vars %}{{element.cli_pattern_vars[i]}}{% else %}{{i+1}}{% endif %}</label>
+				</div>
+			</td>
+		</tr>
+		{% endfor %}
+	</table>
+	{%- endif %}
 </td>
 	{%- elif element.type == 'Num' %}
-<td class="input-field">
-	<div class="number-input-wrapper">
-		<input id="{{element.id}}" type="number" class="validate"/>
+<td{{span_str}}{{width_str}}>
+	<div class="input-field number-input-wrapper">
+		{%- if element.none_value_allowed %}
+		<div class="none-switch switch prefix">
+			<label>
+				<input id="{{element.id}}_none_switch" type="checkbox"/>
+				<span class="lever"></span>
+			</label>
+		</div>
+		{%- endif %}
+		<input id="{{element.id}}" type="number"/>
 		<label for="{{element.id}}">{{element.title}}</label>
 	</div>
 </td>
 	{%- elif element.type == 'Bool' %}
-<td style="width: 1%;">
-	{% set cb_id = element.id|unique_id %}
-	<input type="checkbox" id="{{cb_id}}" />
-	<label for="{{cb_id}}">{{element.title}}</label>
+<td style="width: 1%;"{{span_str}}>
+	<input type="checkbox" id="{{element.id|new_unique_id}}"{% if element.none_value_allowed %} class="tristate-checkbox"{% endif %}{% if element.default == None %} readonly{% elif element.default|lower == 'true' %} checked{% endif %}/>
+	<label for="{{element.id|current_unique_id}}" style="	white-space: nowrap;">{{element.title}}</label>
+	{% if element.default == None %}<script>document.getElementById("{{element.id|current_unique_id}}").indeterminate = true;</script>{% endif %}
 </td>
 	{%- elif element.type == 'Date' %}
-<td class="input-field">
-	<input id="{{element.id}}" type="date" class="datepicker">
-	<label for="{{element.id}}">{{element.title}}</label>
+<td{{span_str}}{{width_str}}>
+	{%- if element.none_value_allowed %}
+	<div class="none-switch switch" style="display:table-cell; position:relative; left:5px; top:-5px;">
+		<label>
+			<input id="{{element.id}}_none_switch" type="checkbox"/>
+			<span class="lever"></span>
+		</label>
+	</div>
+	{%- endif %}
+	<div class="input-field"{% if element.none_value_allowed %} style="display:table-cell; width:100%;"{% endif %}>
+		<input id="{{element.id}}" type="date" class="datepicker">
+		<label for="{{element.id}}">{{element.title}}</label>
+	</div>
+</div>
 </td>
 	{%- elif element.type == 'File' %}
-<td class="file-field input-field">
-	<div class="btn">
-		<span>{{element.title}}</span>
-		<input type="file">
+<td{{span_str}}{{width_str}}>
+	{%- if element.none_value_allowed %}
+	<div class="none-switch switch" style="display:table-cell; position:relative; left:5px; top:-10px;">
+		<label>
+			<input id="{{element.id}}_none_switch" type="checkbox"/>
+			<span class="lever"></span>
+		</label>
 	</div>
-	<div class="file-path-wrapper">
-		<input id="{{element.id}}" class="file-path validate" type="text">
+	{%- endif %}
+	<div class="input-field file-field"{% if element.none_value_allowed %} style="display:table-cell; width:100%;"{% endif %}>
+		<div class="btn">
+			<span>{{element.title}}</span>
+			<input type="file">
+		</div>
+		<div class="file-path-wrapper">
+			<input id="{{element.id}}" class="file-path validate" type="text">
+		</div>
 	</div>
 </td>
 	{%- elif element.type == 'Choice' %}
-<td class="input-field">
-	<select>
-		<option value="" disabled selected>Choose..</option>
-		<option value="0">{{'asd'}}</option>
-		{%- for choice in element.choices %}
-		<option value="{{loop.index}}">{{choice}}</option>
-		{%- endfor %}
-	</select>
-	<label>{{element.title}}</label>
+<td{{span_str}}{{width_str}}>
+	<div class="input-field">
+		{%- if not element.none_value_allowed %}
+		<div class="none-switch switch prefix">
+			<label>
+				<input id="{{element.id}}_none_switch" type="checkbox"/>
+				<span class="lever"></span>
+			</label>
+		</div>
+		{%- endif %}
+		<select id="{{element.id}}">
+			<option value="" disabled selected>Choose..</option>
+			{%- for choice in element.choices %}
+			<option value="{{choice}}">{{choice}}</option>
+			{%- endfor %}
+		</select>
+		<label>{{element.title}}</label>
+	</div>
 </td>
-	{%- endif %}
 {%- endif %}
 {%- endmacro -%}
 
-{%- macro gui_section(section) %}
-
-
+{%- macro gui_grid_row(row) %}
+<tr>
+	{%- for cell in row.elements %}
+		{%- set dim = row.dimensions[loop.index-1] %}
+		{%- if cell|element_type == 'EmptyCell' %}
+	<td{% if dim.colspan != 1 %} colspan="{{dim.colspan}}"{% endif %} style="min-width: {{dim.width}}%;"></td>
+		{%- elif cell|element_type == 'Parameter' %}
+	{{ gui_parameter(cell, dim.colspan, dim.width)|tab_indent }}
+		{% endif %}
+	{%- endfor %}
+</tr>
 {%- endmacro -%}
 
-
 <!DOCTYPE html>
+<!-- Automatically generated code. Do not edit directly. -->
 <html>
     <head>
 		<!--Import Google Icon Font-->
-		<link href="materialize/css/material-icons.css" rel="stylesheet">
+		<link rel="stylesheet" href="materialize/css/material-icons.css">
 		<!--Import materialize.css-->
 		<link type="text/css" rel="stylesheet" href="materialize/css/materialize.css"  media="screen,projection"/>
+		<!--Import custom.css-->
+		<link type="text/css" rel="stylesheet" href="custom/css/custom.css"  media="screen,projection"/>
 	</head>
     <body>
 		<style>
@@ -110,15 +238,17 @@ GuiGrid
 				background-color: #bdbdbd;
 				line-height: 36px;
 				height: 36px;
+				padding-left: 15px;
 				margin-bottom: 35px;
 			}
+			
 			tr.has-textarea td
 			{
 				vertical-align: top;
 			}
 			.collapsible-body, .tab-body
 			{
-				padding-top: 25px;
+				//padding-top: 25px;
 			}
 			.switch label .lever
 			{
@@ -134,15 +264,53 @@ GuiGrid
 			{
 				max-width:15em;
 			}
+			
+			.sub-command-wrapper
+			{
+				white-space: nowrap;
+				margin-top: 5px;
+				vertical-align: top;
+			}
+			.sub-command-wrapper button
+			{
+				padding-left:15px;
+				padding-right:10px;
+			}
+			.sub-command-wrapper button span
+			{
+				vertical-align: top;
+				margin-right:5px;
+			}
+			.sub-command-wrapper button i
+			{
+				font-size: 1.5rem;
+			}
+			
+			div.switch.none-switch
+			{
+				width:1px;
+				transform: rotate(-90deg) scale(0.85, 0.85);
+				position:relative;
+				right:5px;
+				top:45px;
+			}
+			div.switch.none-switch input
+			{
+				display:none;
+			}
+			
+			
+			
 		</style>
 		<div class="container">
-			<h4>{{root_command_name}}</h2>
+			<h4>{{root_command_name}}</h4>
 			{%- for command in commands %}
+				{%- if command.parameters or command.sub_commands %}
 			<div id="{{command.id}}" class="command-panel"{% if command.id != root_command_id %} style="display:none;"{% endif %}>
 				{%- if command.id != root_command_id %}
 				<nav>
 					{%- for parent_command in command|all_parent_commands %}
-					<a href="#{{parent_command.id}}" class="parent-command-link breadcrumb">{{parent_command.title}}</a>
+					<a data-command-id="{{parent_command.id}}" href="#!" class="parent-command-link breadcrumb">{{parent_command.title}}</a>
 					{%- endfor %}
 					<a href="#!" class="breadcrumb">{{command.title}}</a>
 				</nav>
@@ -153,9 +321,24 @@ GuiGrid
 				<div class="command-description">
 					<p>{{command.description}}</p>
 				</div>
-				{%- endif %}
-				{{gui_structure(command.gui)}}
+				{%- endif -%}
+				{{ gui_structure(command.gui)|tab_indent(4) }}
+				<hr/>
+				<table class="bordered">
+					{%- for sub_command in command.sub_commands %}
+					<tr>
+						<td class="sub-command-wrapper">
+							<button  data-command-id="{{sub_command.id}}" type="button" class="btn{% if sub_command.parameters or sub_command.sub_commands %} sub-command-button{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
+						</td>
+						<td style="width: 15px;"/>
+						<td>
+							{{sub_command.description}} asdasd sdfsd asd
+						</td>
+					</tr>
+					{%- endfor %}
+				</table>
 			</div>
+				{%- endif %}
 			{%- endfor %}
 		</div>
 		<br/><br/><br/><br/><br/><br/><br/><br/><br/>
@@ -170,6 +353,9 @@ GuiGrid
 		<!-- Include all compiled bootstrap plugins -->
 		<script type="text/javascript" src="materialize/js/materialize.min.js"></script>
 		
+		<!-- Import custom.js -->
+		<script type="text/javascript" src="custom/js/custom.js"></script>
+		
 		<!-- script-import hack for electron -->
 		<script>if (window.module) module = window.module;</script>
 	</body>
@@ -177,40 +363,6 @@ GuiGrid
 	<script>
 		// You can also require other files to run in this process
 		require('./renderer.js');
-		
-		// ------------------- PARENT COMMANDS -------------------
-		
-		function toggle_command_panel(command_id)
-		{
-			var command_panels = $(".command-panel");
-			
-			for(var i=0; i<command_panels.length; i++)
-			{
-				command_panel = command_panels[i];
-				
-				if(command_panel.id == command_id)
-				{
-					$(command_panel).show();
-				}
-				else
-				{
-					$(command_panel).hide();
-				}
-			}
-		}
-		
-		function cmd_link_click_handler(event)
-		{
-			alert(event.target);
-			command_id = event.data;
-			toggle_command_panel(command_id);
-		}
-		$('.parent-command-link').click(cmd_link_click_handler);
-		/*
-		$('#cmd1_link').click('cmd1', cmd_link_click_handler);
-		$('#sub1_link').click('sub1', cmd_link_click_handler);
-		$('#sub2_link').click('sub2', cmd_link_click_handler);
-		*/
 		
 		// ------------------- MATERIALIZE INIT -------------------
 		
@@ -226,9 +378,9 @@ GuiGrid
 		var activated_icon = 'check_circle';
 		var deactivated_icon = 'radio_button_unchecked';
 		
-		function toggle_section_group_icons(event)
+		$('.collapsible-header.exclusive-section').click(function(event)
 		{
-			var current_section = $(event.delegateTarget);
+			var current_section = $(this);
 			var section_group = current_section.parent().parent();
 			
 			var sections = section_group.children('li').children('div.collapsible-header');
@@ -251,11 +403,11 @@ GuiGrid
 			{
 				current_section.children('i').text(activated_icon);
 			}
-		}
+		});
 		
-		function toggle_section_icon(event)
+		$('.collapsible-header.optional-section').click(function()
 		{
-			var current_section = $(event.delegateTarget);
+			var current_section = $(this);
 			if(current_section.hasClass('active'))
 			{
 				current_section.children('i').text(deactivated_icon);
@@ -264,10 +416,72 @@ GuiGrid
 			{
 				current_section.children('i').text(activated_icon);
 			}
+		});
+		
+		// ------------------- COMMAND PANELS -------------------
+		
+		function toggle_command_panel()
+		{
+			var button = $(this);
+			var command_id = button.attr('data-command-id');
+			
+			var command_panels = $(".command-panel");
+			
+			for(var i=0; i<command_panels.length; i++)
+			{
+				command_panel = $(command_panels[i]);
+				
+				if(command_panel.attr('id') == command_id)
+				{
+					command_panel.fadeIn(200);
+				}
+				else
+				{
+					command_panel.hide();
+				}
+			}
 		}
 		
-		$('.collapsible-header.exclusive-section').click(toggle_section_group_icons);
-		$('.collapsible-header.optional-section').click(toggle_section_icon);
+		$('.sub-command-button').click(toggle_command_panel);
+		$('.parent-command-link').click(toggle_command_panel);
+		
+		// ------------------- TRISTATE CHECKBOX -------------------
+		
+		$(".tristate-checkbox").click(function() // add tri-state checkbox functionality
+		{
+			if (this.readOnly) this.checked=this.readOnly=false;
+			else if (!this.checked) this.readOnly=this.indeterminate=true;
+		});
+		
+		function get_checkbox_state(cb) // get checkbox state: true, false or null (intermidiate)
+		{
+			if(cb.indeterminate) return null;
+			else return cb.checked;
+		}
+		
+		// ------------------- NONE SWITCH -------------------
+		
+		$('.none-switch input').click(function(event)
+		{
+			var none_switch = $(event.delegateTarget);
+			var switch_id = none_switch.attr('id');
+			var param_id = switch_id.substring(0, switch_id.length - '_none_switch'.length);
+			
+			$('[id='+param_id+']').prop('disabled', !none_switch.prop('checked'));
+		});
+		
+		// -------------------
+		
+		
+		
+		$('.add-input-field').click(function()
+		{
+			var input_field = $(this);
+			
+			
+			
+			
+		});
 		
 	</script>
 </html>

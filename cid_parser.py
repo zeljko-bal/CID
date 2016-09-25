@@ -152,8 +152,8 @@ class ParameterProcessor:
 			else:
 				parameter.default = {
 					"Str":"",
-					"Num":0,
-					"Bool":False,
+					"Num":'0',
+					"Bool":'False',
 					"Date":"",
 					"File":".",
 					"Choice":parameter.choices[0] if parameter.choices else None,
@@ -168,8 +168,10 @@ class ParameterProcessor:
 		if parameter.multiplicity == '*' or parameter.multiplicity > 1:
 			parameter.default = [parameter.default]
 		
-		if not parameter.none_value_allowed:
-			parameter.none_value_allowed = 'Disallowed' if parameter.default is not None else 'Allowed'
+		if parameter.none_value_allowed:
+			parameter.none_value_allowed = parameter.none_value_allowed == 'Allowed'
+		else:
+			parameter.none_value_allowed = parameter.default is None
 			
 		if not parameter.date_format and parameter.type == 'Date':
 			parameter.date_format = "%d.%m.%Y"
@@ -190,7 +192,7 @@ class ParameterProcessor:
 			if constraint.type not in supported_constraints:
 				raise Exception('constraint.type unsupported')
 		
-		if not parameter.none_value_allowed == 'Allowed' and parameter.default == 'None':
+		if not parameter.none_value_allowed and parameter.default == 'None':
 			raise Exception("parameter.none value disallowed and parameter.default == 'None'.")
 			
 		if parameter.default_is_none and parameter.default:
@@ -382,8 +384,6 @@ def gather_gui_group_sub_elements(gui_group):
 			if element in gui_group.sub_elements:
 				raise Exception('duplicate element in gui structure')
 			gui_group.sub_elements.add(element)
-		else:
-			raise Exception("internal error in gather_gui_structure_sub_elements")
 
 def gather_gui_element_sub_elements(gui_element):
 	gui_element.sub_elements = gui_element.body.sub_elements
@@ -393,7 +393,6 @@ _gather_gui_sub_elements_visitor = {
 	'GuiTabs':gather_gui_group_sub_elements,
 	'GuiSectionGroup':gather_gui_group_sub_elements,
 	'GuiSection':gather_gui_element_sub_elements,
-	'GuiStack':gather_gui_element_sub_elements,
 	'GuiGrid':gather_gui_group_sub_elements,
 	'GuiTab':gather_gui_element_sub_elements,
 	'GuiGridRow':gather_gui_group_sub_elements,

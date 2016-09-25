@@ -27,9 +27,15 @@ def get_cli_pattern_count(pattern):
 		elif pattern.vars:
 			return len(pattern.vars)
 	return 1
-		
+	
 def element_id(element_name, parents=[]):
 	return '/'+'/'.join(parents+[element_name])
+	
+def tab_indent_filter(text, level=1, start_from=1):
+	return '\n'.join([(level*'\t')+line if idx+1 >= start_from else line for idx, line in enumerate(text.split('\n'))])
+	
+def raise_exception_helper(msg):
+	raise Exception(msg)
 	
 class ElementExtractor():
 	def __init__(self):

@@ -211,7 +211,7 @@ GuiStructure:
 ;
 
 GuiElement:
-  GuiTabs|GuiSectionGroup|GuiSection|GuiStack|GuiGrid|ParameterReference
+  GuiTabs|GuiSectionGroup|GuiSection|GuiGrid|ParameterReference
 ;
 
 GuiTabs:
@@ -243,10 +243,6 @@ GuiSection:
   '}'
 ;
 
-GuiStack:
-  "stack:" body=GuiGridRow
-;
-
 GuiGrid:
   "grid:"
     elements+=GuiGridRow
@@ -261,11 +257,11 @@ GuiGridCell:
 ;
 
 EmptyCell:
-  /_+/
+  body=/_+/
 ;
 
 CellSpan:
-  /-+/
+  body=/>+/
 ;
 
 Comment:

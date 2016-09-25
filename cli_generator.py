@@ -304,7 +304,7 @@ _usage_help_jinja_env = Environment(loader=FileSystemLoader('.'))
 _usage_help_jinja_env.filters['parameters_usage_help'] = generate_parameters_usage_help
 _usage_help_jinja_env.filters['subcommands_usage_help'] = generate_subcommands_usage_help
 _usage_help_jinja_env.filters['usage_lines_repr'] = usage_lines_repr_filter
-_usage_help_template = _usage_help_jinja_env.get_template('usage_help.template')
+_usage_help_template = _usage_help_jinja_env.get_template('usage_help.template.py')
 
 # -------------------------------
 
@@ -390,12 +390,6 @@ def parameter_model_filter(parameter):
 				prefixes = [p.prefix for p in patterns]
 				ret.append("BasicNonpositional('{name}', {prefixes})".format(name=parameter.name, prefixes=print_list(prefixes)))
 		return ', '.join(ret)
-		
-def tab_indent_filter(text, level=1, start_from=1):
-	return '\n'.join([(level*'\t')+line if idx+1 >= start_from else line for idx, line in enumerate(text.split('\n'))])
-	
-def raise_exception_helper(msg):
-	raise Exception(msg)
 	
 def stringify_filter(value):
 	if isinstance(value, str):
@@ -443,7 +437,7 @@ def render_cli_code(model, root_command_name, dest_path):
 	
 	env.globals['raise'] = raise_exception_helper
 	
-	template = env.get_template('cli.py.template')
+	template = env.get_template('cli.template.py')
 	
 	rendered = template.render(root_command_name=root_command_name, root_command_id=element_id(root_command_name), commands=all_commands, parameters=all_parameters)
 
