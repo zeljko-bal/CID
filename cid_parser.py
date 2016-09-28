@@ -78,7 +78,9 @@ class CommandProcessor:
 		self.defaults(command)
 		self.check(command)
 		self.all_defined_commands.append(command)
-
+	
+	# command.usages = all usages
+	# del command.usage
 	def transform(self, command):
 		# transform multiline usages
 		if command.usages:
@@ -112,18 +114,28 @@ class ParameterProcessor:
 		self.defaults(parameter)
 		self.check(parameter)
 		self.all_defined_parameters.append(parameter)
-		
+	
 	def transform(self, parameter):
+		'''
+		add parameter.nonpositional
+		fix parameter.default
+		add parameter.all_patterns
+		add parameter.cli_pattern_vars
+		add parameter.cli_pattern_count
+		'''
 		# set parameter.nonpositional
 		parameter.nonpositional = parameter.cli and parameter.cli.cli_pattern
 		
+		# fix parameter.default model structure
 		if len(parameter.default) == 1:
 			parameter.default = parameter.default[0]
 		
 		if parameter.nonpositional:
+			# set parameter.all_patterns 
 			parameter.cli.cli_pattern.parent = parameter
 			parameter.all_patterns = [parameter.cli.cli_pattern]+parameter.cli_aliases
 			
+			# set parameter.cli_pattern_vars
 			for pattern in parameter.all_patterns:
 				if hasattr(pattern, 'vars') and pattern.vars:
 					pattern.vars = [v.value for v in pattern.vars]
@@ -131,10 +143,8 @@ class ParameterProcessor:
 					if not hasattr(parameter, 'cli_pattern_vars'):
 						parameter.cli_pattern_vars = pattern.vars
 			
+			# set parameter.cli_pattern_count
 			parameter.cli_pattern_count = get_cli_pattern_count(parameter.all_patterns[0])
-			
-			if parameter.cli_pattern_count not in [1, '*'] and not isinstance(parameter.default, list):
-				parameter.default = [parameter.default]*parameter.cli_pattern_count
 		
 	def defaults(self, parameter):
 		if not parameter.title:
@@ -158,15 +168,13 @@ class ParameterProcessor:
 					"File":".",
 					"Choice":parameter.choices[0] if parameter.choices else None,
 				}[parameter.type]
+				
+				if parameter.default is None:
+					raise Exception('Internal error: ParameterProcessor.defaults unknown Parameter.type.')
 			
-		if parameter.nonpositional and not parameter.default_is_none:
-			if parameter.cli_pattern_count == '*':
-				parameter.default = [parameter.default]
-			elif parameter.cli_pattern_count > 1 and not isinstance(parameter.default, list):
+		if parameter.nonpositional and not parameter.default_is_none and not isinstance(parameter.default, list):
+			if parameter.cli_pattern_count not in [1, '*']:
 				parameter.default = [parameter.default]*parameter.cli_pattern_count
-			
-		if parameter.multiplicity == '*' or parameter.multiplicity > 1:
-			parameter.default = [parameter.default]
 		
 		if parameter.none_value_allowed:
 			parameter.none_value_allowed = parameter.none_value_allowed == 'Allowed'

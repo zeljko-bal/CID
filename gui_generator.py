@@ -60,7 +60,7 @@ def usage_or_group_gui_structure(or_group):
 	or_group.gui_structure = GuiSectionGroup(parent=None, elements=[], exclusive=True)
 	
 	for idx, or_element in enumerate(or_group.elements):
-		section = GuiSection(parent=or_group.gui_structure, title='', body=None, expanded=idx==0, optional=False)
+		section = GuiSection(parent=or_group.gui_structure, title='Variant: {}'.format(idx+1), body=None, expanded=idx==0, optional=False)
 		if element_type(or_element) == 'Parameter':
 			section.body = GuiStructure(parent=section, elements=[or_element])
 		else:
@@ -101,7 +101,7 @@ def gui_structure_defaults(command):
 			section_group = GuiSectionGroup(parent=command, elements=[], exclusive=True)
 			
 			for idx, usage in enumerate(command.usages):
-				section = GuiSection(parent=section_group, title='', body=None, expanded=idx==0, optional=False)
+				section = GuiSection(parent=section_group, title='Variant: {}'.format(idx+1), body=None, expanded=idx==0, optional=False)
 				section.body = usage.gui_structure
 				section.body.parent = section
 				section_group.elements.append(section)
@@ -182,11 +182,11 @@ def process_model(model):
 	ModelProcessor([{'GuiSectionGroup':gui_section_group_defaults, 'Command':gui_structure_defaults, 'GuiGridRow':add_gui_grid_row_dimensions}, _convert_id_visitor]).process_model(model)
 	ModelProcessor({'Parameter':check_parameter_widget, 'GuiGrid':check_gui_grid, 'GuiSectionGroup':check_gui_section_group}).process_model(model)
 	
-	print_model(model, print_empty_attrs=False, print_empty_lists=True, omitted_attributes=[ 
+	'''print_model(model, print_empty_attrs=False, print_empty_lists=True, omitted_attributes=[ 
 		#'usage_help', 'long_usage_help', 
 		'all_patterns', 
 		'sub_elements',
-	])
+	])'''
 	
 def render_gui_code(model, root_command_name, dest_path):
 	# EXTRACT DATA ---------------------
@@ -222,11 +222,34 @@ def generate_gui(cid_file, root_command_name, dest_path):
 	model = parse(cid_file)
 	process_model(model)
 	render_gui_code(model, root_command_name, dest_path)
+	import winsound; winsound.PlaySound('turret_collide_2.wav', winsound.SND_FILENAME)
 	
 # ------------------------------- MAIN -------------------------------
 	
 if __name__ == '__main__':
 	generate_gui('./example1.cid', 'command1', '../../material_html_template/generated-electron-quick-start/') # TODO src path as arg, # TODO root_command_name and dest path as args
+
+	
+	
+!!!!!!!!!!!!! 
+- nema vise none_allowed
+- ima empty_str = allowed/disalowed samo za string, po defaultu je True ako je default=''
+- defaults:
+	"Str":None,
+	"Num":None,
+	"Bool":'False',
+	"Date":None,
+	"File":None,
+	"Choice":None
+(tehnicki 
+if not parameter.default:
+	if parameter.type == 'Bool': 
+		parameter.default = 'False' sem ako postoji pos i neg pattern, onda je none
+)
+- switch ima samo za string ako je empty_str_allowed (i za multiple i count many str), kad je iskljucen i klikne se na polje automatski se ukljuci, ostali imaju fazon za none
+- u many ako su sva polja prazna onda je ceo param none
+
+
 
 # sub commands [v]
 # default = none [v]

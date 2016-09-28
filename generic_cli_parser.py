@@ -67,6 +67,16 @@ class ParameterModel:
 		self.parser_models = parser_models
 		self.date_format = date_format
 		self.cli_pattern_vars = cli_pattern_vars
+		self.nonpositional = isinstance(usage_model, NonPositionalParameter)
+		self.multiplicity = usage_model.multiplicity
+		if parser_models:
+			parser_model = parser_models[0]
+			if isinstance(parser_model, MultiArgNonpositional):
+				self.pattern_count = parser_model.count
+			elif isinstance(parser_model, SeparatedNonpositional):
+				self.pattern_count = '*'
+			else:
+				self.pattern_count = 1
 		
 class MatchedArgument:
 	def __init__(self, name, value):
@@ -447,9 +457,8 @@ def parse_cli_args(root_command_id, command_models, args):
 		matched_positionals = process_cli_usage_model(command_model.usage_model, command.matched_nonpositionals, command.positional_args, command.separator, command.sub_command_id)
 		
 		all_matched_args = command.matched_nonpositionals + matched_positionals # matched positional and nonpositional args
-		matched_names = [matched.name for matched in all_matched_args] # names of all matched args
-		for missing_arg in [p for p in command_model.parameter_models.values() if p.name not in matched_names]: # for all args not present in matched args
-			all_matched_args.append(MatchedArgument(missing_arg.name, missing_arg.default)) # add default values
+		
+		add_defaults(command_model, all_matched_args)
 		
 		for arg in all_matched_args:
 			arg.value = convert_data(arg.value, command_model.parameter_models[arg.name])
@@ -457,11 +466,30 @@ def parse_cli_args(root_command_id, command_models, args):
 		matched_args[command_model.id] = CommandArgs(all_matched_args, command.sub_command_id)
 	
 	return matched_args
-	
+
+def add_defaults(command_model, all_matched_args):
+	matched_names = [matched.name for matched in all_matched_args] # names of all matched args
+	for missing_arg in [p for p in command_model.parameter_models.values() if p.name not in matched_names]: # for all args not present in matched args
+		if missing_arg.default is None:
+			value = None
+		else:
+			if missing_arg.nonpositional and missing_arg.pattern_count == '*':
+				value = [missing_arg.default]
+			else:
+				value = missing_arg.default
+			
+		if missing_arg.multiplicity != 1:
+			value = [value]
+		
+		all_matched_args.append(MatchedArgument(missing_arg.name, value)) # add default values
+
+def is_iterable(data):
+	return hasattr(data, '__iter__') and not isinstance(data, str)
+
 def convert_data(data, model):
-	if hasattr(data, '__iter__') and not isinstance(data, str):
+	if is_iterable(data):
 		ret = [convert_data(element, model) for element in data]
-		if model.cli_pattern_vars:
+		if model.cli_pattern_vars and not is_iterable(ret[0]): # has cli_pattern_vars and values are not themselves lists
 			ret = namedtuple(model.name, model.cli_pattern_vars)(*ret)
 		return ret
 	elif isinstance(data, str):
@@ -476,8 +504,8 @@ def convert_data(data, model):
 			return datetime.strptime(data, model.date_format)
 		elif model.type == "Bool":
 			return {"true":True, "false":False}[data.lower()]
-	
-	return data
+	else:
+		return data
 
 def invoke_commands(command_callbacks, root_command_id, command_models, args):
 	def get_cmd_callback(command_id, commands):
