@@ -97,7 +97,7 @@
 			{%- endif %}
 		</div>
 {%- elif element.type in ['Str', 'Num', 'Date', 'File', 'Choice'] %}
-	{%- if element.none_value_allowed %}
+	{%- if element.none_value_allowed and element.type == 'Str' %}
 		<div style="width:40px;">
 			<div class="none-switch switch" style="left:15px; top:45px;">
 				<label>

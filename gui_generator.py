@@ -232,9 +232,9 @@ if __name__ == '__main__':
 	
 	
 !!!!!!!!!!!!! 
-- nema vise none_allowed
-- ima empty_str = allowed/disalowed samo za string, po defaultu je True ako je default=''
-- defaults:
+- nema vise none_allowed [v]
+- ima empty_str = allowed/disalowed samo za string, po defaultu je True ako je default='' [v]
+- defaults: [v]
 	"Str":None,
 	"Num":None,
 	"Bool":'False',
@@ -246,15 +246,15 @@ if not parameter.default:
 	if parameter.type == 'Bool': 
 		parameter.default = 'False' sem ako postoji pos i neg pattern, onda je none
 )
-- switch ima samo za string ako je empty_str_allowed (i za multiple i count many str), kad je iskljucen i klikne se na polje automatski se ukljuci, ostali imaju fazon za none
-- u many ako su sva polja prazna onda je ceo param none
+- switch ima samo za string ako je empty_str_allowed (i za multiple i count many str), kad je iskljucen i klikne se na polje automatski se ukljuci, ostali imaju fazon za none []
+- u many ako su sva polja prazna onda je ceo param none []
 
 
 
 # sub commands [v]
 # default = none [v]
-# param count [] # za File: You can also use the multiple attribute to allow multiple file uploads. 
-# multi param []
+# param count [v] # za File: You can also use the multiple attribute to allow multiple file uploads. 
+# multi param [v]
 # param description prikaz []
 # param help prikaz []
 # command help prikaz []

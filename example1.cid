@@ -24,7 +24,7 @@ Cmd command1 "Command1":
 			description: "Custom description. {default_desc} And so on.."
 			help: "Help about str_par1."
 			default: "default val"
-			none_value: Allowed
+			empty_str: Allowed
 			multiplicity: 2
 			cli: "--par1 {}", "-p1={}"
 		
@@ -47,12 +47,12 @@ Cmd command1 "Command1":
 			
 		Str tuple_par2:
 			cli: "--tuple-par2 {'xx', 'yy'}", "-tp2 {2}"
-			none_value: Allowed
+			empty_str: Allowed
 			multiplicity: *
 			
 		Str many_par:
 			cli: "--many-par {*}"
-			none_value: Allowed
+			empty_str: Allowed
 			multiplicity: *
 			
 		Str separated_par:

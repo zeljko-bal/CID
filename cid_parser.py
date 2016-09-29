@@ -1,8 +1,10 @@
 
 from textx.metamodel import metamodel_from_file
 
-from model_processor import ModelProcessor
+from model_processor import ModelProcessor, ProcessorInvoker
 from common import *
+
+invoker = ProcessorInvoker()
 
 class CliOptionalGroup:
 	def __init__(self, parent, elements):
@@ -73,6 +75,7 @@ class CommandProcessor:
 	def __init__(self):
 		self.all_defined_commands = []
 		
+	@invoker.processor(type='Command', name='process_command', attrs=[], adds=[], dels=['command.usage'], requires=[])
 	def process_command(self, command):
 		self.transform(command)
 		self.defaults(command)
@@ -105,6 +108,12 @@ class CommandProcessor:
 	
 # -------------------------------
 
+
+		
+		
+		
+		
+
 class ParameterProcessor:
 	def __init__(self, imported_prefixes=[]):
 		self.all_defined_parameters = []
@@ -122,6 +131,8 @@ class ParameterProcessor:
 		add parameter.all_patterns
 		add parameter.cli_pattern_vars
 		add parameter.cli_pattern_count
+		del parameter.empty_str_disallowed
+		add parameter.none_allowed
 		'''
 		# set parameter.nonpositional
 		parameter.nonpositional = parameter.cli and parameter.cli.cli_pattern
@@ -145,6 +156,21 @@ class ParameterProcessor:
 			
 			# set parameter.cli_pattern_count
 			parameter.cli_pattern_count = get_cli_pattern_count(parameter.all_patterns[0])
+			
+			# del parameter.empty_str_disallowed
+			if (parameter.empty_str_allowed or parameter.empty_str_disallowed) and parameter.type != 'Str':
+				raise Exception("empty_str_allowed or empty_str_disallowed in non Str")
+			
+			if parameter.default == '' and parameter.empty_str_disallowed:
+				raise Exception("parameter.empty_str_disallowed and parameter.default == ''")
+			
+			# add parameter.none_allowed
+			if parameter.type == 'Bool':
+				parameter.none_allowed = [p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]
+			else:
+				parameter.none_allowed = True
+			
+			del parameter.empty_str_disallowed
 		
 	def defaults(self, parameter):
 		if not parameter.title:
@@ -160,26 +186,19 @@ class ParameterProcessor:
 			if parameter.default_is_none:
 				parameter.default = None
 			else:
-				parameter.default = {
-					"Str":"",
-					"Num":'0',
-					"Bool":'False',
-					"Date":"",
-					"File":".",
-					"Choice":parameter.choices[0] if parameter.choices else None,
-				}[parameter.type]
-				
-				if parameter.default is None:
-					raise Exception('Internal error: ParameterProcessor.defaults unknown Parameter.type.')
+				if parameter.type == 'Bool':
+					# if parameter doesnt contain both positive and negative patterns
+					if not ([p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]):
+						# set to False by default
+						parameter.default = 'False'
+					# else: leave None (for a case where neither positive nor negative arg is provided)
+			
+		if parameter.default == '':
+			parameter.empty_str_allowed = True
 			
 		if parameter.nonpositional and not parameter.default_is_none and not isinstance(parameter.default, list):
 			if parameter.cli_pattern_count not in [1, '*']:
 				parameter.default = [parameter.default]*parameter.cli_pattern_count
-		
-		if parameter.none_value_allowed:
-			parameter.none_value_allowed = parameter.none_value_allowed == 'Allowed'
-		else:
-			parameter.none_value_allowed = parameter.default is None
 			
 		if not parameter.date_format and parameter.type == 'Date':
 			parameter.date_format = "%d.%m.%Y"
@@ -199,9 +218,6 @@ class ParameterProcessor:
 			}[element_type(parameter)]
 			if constraint.type not in supported_constraints:
 				raise Exception('constraint.type unsupported')
-		
-		if not parameter.none_value_allowed and parameter.default == 'None':
-			raise Exception("parameter.none value disallowed and parameter.default == 'None'.")
 			
 		if parameter.default_is_none and parameter.default:
 			raise Exception('parameter.default_is_none and parameter.default')
@@ -218,6 +234,7 @@ class ParameterProcessor:
 		if not parameter.multiplicity == 1 and parameter.type == "Bool":
 			raise Exception("Multiplicity for Bool type parameters must be 1: {param}.".format(param=parameter.name))
 			
+		# requires [nonpositional, cli_pattern_count, all_patterns, cli_pattern_vars]
 		if parameter.nonpositional:
 			if parameter.cli_pattern_count not in [1, '*'] and len(parameter.default) != parameter.cli_pattern_count:
 				raise Exception("Parameter pattern count and default values count do not match.")
@@ -514,3 +531,5 @@ def parse(script_path):
 	
 	return model
 	
+	
+# logicke checkove u defaults i transform, dodatne u check []

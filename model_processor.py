@@ -2,16 +2,64 @@
 from inspect import getfullargspec
 from types import MethodType, BuiltinMethodType
 from contextlib import contextmanager
+from collections import namedtuple, defaultdict
 
 from common import *
 
-class ParentContext:
-	def __init__(self, parent_stack, model):
-		self.parent_stack = parent_stack
-		self.model = model
+@total_ordering
+class ProcessorFunction:
+	def __init__(self, name, func, attrs=[], adds=[], dels=[], requires=[]):
+		self.type = type
+		self.name = name
+		self.attrs = attrs
+		self.adds = adds
+		self.dels = dels
+		self.requires = requires
 		
-	
-
+	def __call__(self, *args, **kwargs):
+		return self.func(*args, **kwargs)
+		
+	def __eq__(self, other):
+		if self.name == other.name:
+			return True
+		# True if self and other are not in each others requires list and there is no intersection between what self and other add or remove and what they require
+		return self.name not in other.requires and other.name not in self.requires \
+			and set(self.attrs).isdisjoint(set(other.adds)) and set(other.attrs).isdisjoint(set(self.adds)) \
+			and set(self.attrs).isdisjoint(set(other.dels)) and set(other.attrs).isdisjoint(set(self.dels))
+		
+	def __lt__(self, other):
+		# True if self has to go before other or self adds any of others required attrs or other deletes any of self required attrs
+		return self.name in other.requires or any([a in self.adds for a in other.attrs]) or any([a in other.dels for a in self.attrs])
+		
+class ProcessorInvoker:
+	def __init__(self, callbacks=[]):
+		self.callbacks = callbacks
+		
+	def invoke(model):
+		sorted_callbacks = sorted(self.callbacks)
+		partitioned_callbacks = [[]]
+		for callback in sorted_callbacks:
+			last_partition = partitioned_callbacks[-1]
+			if not last_partition or all(callback == c for c in last_partition):
+				last_partition.append(callback)
+			else:
+				partitioned_callbacks.append([callback])
+		
+		for partition in partitioned_callbacks:
+			partitioned_by_type = defaultdict(list)
+			for callback in partition:
+				partitioned_by_type[callback.type].append(callback)
+			ModelProcessor(partitioned_by_type).process_model(model)
+			
+	def processor(self, type, name=None, attrs=[], adds=[], dels=[], requires=[]):
+		def processor_decorator(self, func):
+			if not name:
+				name = func.__name__
+			wrapped_func = ProcessorFunction(name, func, attrs, adds, dels requires)
+			self.callbacks.append(wrapped_func)
+			return wrapped_func
+		return processor_decorator
+			
 class ModelProcessor:
 	def __init__(self, callbacks, allow_revisiting=False):
 		if isinstance(callbacks, list):

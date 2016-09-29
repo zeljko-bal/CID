@@ -172,13 +172,8 @@ class command:
 				_annotated_callbacks = func, func.sub_commands
 		else:
 			self.parent.sub_commands[self.name] = func, func.sub_commands
-		
-def command(func, name=None, parent=None):
-	if name:
-		_annotated_callbacks[name] = func
-	else:
-		_annotated_callbacks[func.__name__] = func
-	return func
+			
+		return func
 
 def parse_cli_args(args=None):
 	if args is None:
