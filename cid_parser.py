@@ -1,10 +1,8 @@
 
 from textx.metamodel import metamodel_from_file
 
-from model_processor import ModelProcessor, ProcessorInvoker
+from model_processor import ModelProcessor
 from common import *
-
-invoker = ProcessorInvoker()
 
 class CliOptionalGroup:
 	def __init__(self, parent, elements):
@@ -68,64 +66,46 @@ def process_import_statement(import_statement):
 def process_import_reference(import_reference):
 	if import_reference.imported:
 		import_reference.imported = import_reference_path(import_reference.imported)
-		
-# -------------------------------
 
-class CommandProcessor:
-	def __init__(self):
-		self.all_defined_commands = []
-		
-	@invoker.processor(type='Command', name='process_command', attrs=[], adds=[], dels=['command.usage'], requires=[])
-	def process_command(self, command):
-		self.transform(command)
-		self.defaults(command)
-		self.check(command)
-		self.all_defined_commands.append(command)
+# -------------------------------
+	
+def process_command(command):
+	'''
+	Model structure changes:
+		del command.usage
+	'''
 	
 	# command.usages = all usages
-	# del command.usage
-	def transform(self, command):
-		# transform multiline usages
-		if command.usages:
-			command.usages = [usage.body for usage in command.usages]
-		elif command.usage:
-			command.usages = [command.usage]
-			del command.usage
-		
-	def defaults(self, command):
-		if not command.title:
-			command.title = command.name.replace('_', ' ').replace('-', ' ').strip().title()
+	if command.usages:
+		command.usages = [usage.body for usage in command.usages]
+	elif command.usage:
+		command.usages = [command.usage]
+		del command.usage
 	
-	def check(self, command):
-		if contains_duplicate_names(command.parameters):
-			raise Exception('same_name_params_check')
-			
-		if contains_duplicate_names(command.sub_commands):
-			raise Exception('same_name_commands_check')
-			
-		if command.type == 'Cmd' and element_type(command.parent) != 'Script':
-			print('Warning: command {} of type Cmd found as a sub command.'.format(command.name))
+	# defaults --------------
+	
+	if not command.title:
+		command.title = command.name.replace('_', ' ').replace('-', ' ').strip().title()
+		
+	if not command.cli_command:
+		command.cli_command = command.name
+
+	# additional checks --------------
+	
+	if contains_duplicate_names(command.parameters):
+		raise Exception('same_name_params_check')
+		
+	if contains_duplicate_names(command.sub_commands):
+		raise Exception('same_name_commands_check')
+		
+	if command.type == 'Cmd' and element_type(command.parent) != 'Script':
+		print('Warning: command {} of type Cmd found as a sub command.'.format(command.name))
 	
 # -------------------------------
 
-
-		
-		
-		
-		
-
-class ParameterProcessor:
-	def __init__(self, imported_prefixes=[]):
-		self.all_defined_parameters = []
-		
-	def process_parameter(self, parameter):
-		self.transform(parameter)
-		self.defaults(parameter)
-		self.check(parameter)
-		self.all_defined_parameters.append(parameter)
-	
-	def transform(self, parameter):
-		'''
+def process_parameter(parameter):
+	'''
+	Model structure changes:
 		add parameter.nonpositional
 		fix parameter.default
 		add parameter.all_patterns
@@ -133,126 +113,142 @@ class ParameterProcessor:
 		add parameter.cli_pattern_count
 		del parameter.empty_str_disallowed
 		add parameter.none_allowed
-		'''
-		# set parameter.nonpositional
-		parameter.nonpositional = parameter.cli and parameter.cli.cli_pattern
-		
-		# fix parameter.default model structure
-		if len(parameter.default) == 1:
-			parameter.default = parameter.default[0]
-		
-		if parameter.nonpositional:
-			# set parameter.all_patterns 
-			parameter.cli.cli_pattern.parent = parameter
-			parameter.all_patterns = [parameter.cli.cli_pattern]+parameter.cli_aliases
-			
-			# set parameter.cli_pattern_vars
-			for pattern in parameter.all_patterns:
-				if hasattr(pattern, 'vars') and pattern.vars:
-					pattern.vars = [v.value for v in pattern.vars]
-					
-					if not hasattr(parameter, 'cli_pattern_vars'):
-						parameter.cli_pattern_vars = pattern.vars
-			
-			# set parameter.cli_pattern_count
-			parameter.cli_pattern_count = get_cli_pattern_count(parameter.all_patterns[0])
-			
-			# del parameter.empty_str_disallowed
-			if (parameter.empty_str_allowed or parameter.empty_str_disallowed) and parameter.type != 'Str':
-				raise Exception("empty_str_allowed or empty_str_disallowed in non Str")
-			
-			if parameter.default == '' and parameter.empty_str_disallowed:
-				raise Exception("parameter.empty_str_disallowed and parameter.default == ''")
-			
-			# add parameter.none_allowed
-			if parameter.type == 'Bool':
-				parameter.none_allowed = [p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]
-			else:
-				parameter.none_allowed = True
-			
-			del parameter.empty_str_disallowed
-		
-	def defaults(self, parameter):
-		if not parameter.title:
-			parameter.title = parameter.name.replace('_', ' ').replace('-', ' ').strip().title()
-			
-		if not parameter.multiplicity:
-			parameter.multiplicity = 1
-			
-		if not parameter.description:
-			parameter.description = '{default_desc}'
-		
-		if not parameter.default:
-			if parameter.default_is_none:
-				parameter.default = None
-			else:
-				if parameter.type == 'Bool':
-					# if parameter doesnt contain both positive and negative patterns
-					if not ([p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]):
-						# set to False by default
-						parameter.default = 'False'
-					# else: leave None (for a case where neither positive nor negative arg is provided)
-			
-		if parameter.default == '':
-			parameter.empty_str_allowed = True
-			
-		if parameter.nonpositional and not parameter.default_is_none and not isinstance(parameter.default, list):
-			if parameter.cli_pattern_count not in [1, '*']:
-				parameter.default = [parameter.default]*parameter.cli_pattern_count
-			
-		if not parameter.date_format and parameter.type == 'Date':
-			parameter.date_format = "%d.%m.%Y"
+		del parameter.default_is_none
+	Checks performed: TODO
+	Model changes: TODO
+	'''
 	
-	def check(self, parameter):
-		if parameter.choices and not parameter.type == 'Choice':
-			raise Exception('choices in not Choice parameter: {}'.format(parameter.name))
+	# set parameter.nonpositional
+	parameter.nonpositional = parameter.cli and parameter.cli.cli_pattern
+	
+	# fix parameter.default model structure
+	if len(parameter.default) == 0:
+		parameter.default = None
+	elif len(parameter.default) == 1:
+		parameter.default = parameter.default[0]
+	
+	if parameter.nonpositional:
+		# set parameter.all_patterns 
+		parameter.cli.cli_pattern.parent = parameter
+		parameter.all_patterns = [parameter.cli.cli_pattern]+parameter.cli_aliases
 		
-		if element_type(parameter) == 'Choice' and not parameter.choices:
-			raise Exception('choices required in Choice')
+		# set parameter.cli_pattern_count
+		parameter.cli_pattern_count = get_cli_pattern_count(parameter.all_patterns[0])
 		
-		for constraint in parameter.constraints:
-			supported_constraints = {
-			 'Str':[],
-			 'Choice':[],
-			 'Num':[],
-			}[element_type(parameter)]
-			if constraint.type not in supported_constraints:
-				raise Exception('constraint.type unsupported')
+		# all_patterns
+		for pattern in parameter.all_patterns:
+			# set parameter.cli_pattern_vars
+			if hasattr(pattern, 'vars') and pattern.vars:
+				pattern.vars = [v.value for v in pattern.vars]
+				
+				if not hasattr(parameter, 'cli_pattern_vars'):
+					parameter.cli_pattern_vars = pattern.vars
+				else:	
+					if not (len(parameter.cli_pattern_vars) == len(pattern.vars) and 
+							all([parameter.cli_pattern_vars[i] == pattern.vars[i] for i in range(0,len(pattern.vars))])):
+						raise Exception("Different argument names found for patterns in parameter: {}".format(parameter.name))
+					
+			# StringParamPattern checks
+			if element_type(pattern) == "StringParamPattern":
+				if parameter.type == "Bool":
+					raise Exception('Non boolean cli pattern in Bool type parameter: {param}.'.format(param=parameter.name))
+				if pattern.count_char and not parameter.type == "Num":
+					raise Exception('Counter pattern in non Num type parameter: {param}.'.format(param=parameter.name))
+				if parameter.cli_pattern_count != get_cli_pattern_count(pattern):
+					raise Exception('Different parameter count values encountered in cli patterns for parameter: {param}'.format(param=parameter.name))
+			elif element_type(pattern) in ['BoolWithPositivePattern', 'BoolNegativeOnlyPattern'] and not parameter.type == "Bool":
+				raise Exception('Boolean cli pattern in non Bool type parameter: {param}.'.format(param=parameter.name))
+	else:
+		parameter.cli_pattern_count = 1
+		
+		# empty_str_allowed
+		if (parameter.empty_str_allowed or parameter.empty_str_disallowed) and parameter.type != 'Str':
+			raise Exception("empty_str_allowed or empty_str_disallowed in non Str")
+		
+		if parameter.default == '' and parameter.empty_str_disallowed:
+			raise Exception("parameter.empty_str_disallowed and parameter.default == ''")
 			
-		if parameter.default_is_none and parameter.default:
+		del parameter.empty_str_disallowed
+	
+	# title
+	if not parameter.title:
+		parameter.title = parameter.name.replace('_', ' ').replace('-', ' ').strip().title()
+		
+	# multiplicity
+	if not parameter.multiplicity:
+		parameter.multiplicity = 1
+		
+	if parameter.multiplicity != '*' and parameter.multiplicity <= 0:
+		raise Exception("Multiplicity must be greater than zero: {param}.".format(param=parameter.name))
+	
+	if not parameter.nonpositional and parameter.multiplicity not in [1, '*']:
+		raise Exception("Multiplicity for positional parameters must be either 1 or '*': {param}.".format(param=parameter.name))
+		
+	if not parameter.multiplicity == 1 and parameter.type == "Bool":
+		raise Exception("Multiplicity for Bool type parameters must be 1: {param}.".format(param=parameter.name))
+		
+	# description
+	if not parameter.description:
+		parameter.description = '{default_desc}'
+	
+	# default
+	if parameter.default_is_none:
+		if parameter.type == 'Bool':
+			raise Exception("parameter.default_is_none and parameter.type == 'Bool'")
+		if parameter.default:
 			raise Exception('parameter.default_is_none and parameter.default')
-			
-		if parameter.type == 'Bool' and parameter.default and parameter.default.lower() not in ['true', 'false']:
+	
+	if not parameter.default:
+		if parameter.default_is_none:
+			parameter.default = None
+		else:
+			if parameter.type == 'Bool':
+				# if parameter doesnt contain both positive and negative patterns
+				if not ([p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]):
+					# set to False by default
+					parameter.default = 'False'
+				# else: leave None (for a case where neither positive nor negative arg is provided)
+				
+	del parameter.default_is_none
+	
+	if parameter.default == '':
+		parameter.empty_str_allowed = True
+		
+	if parameter.nonpositional and parameter.default is not None:
+		if parameter.cli_pattern_count not in [1, '*']:
+			if not isinstance(parameter.default, list):
+				parameter.default = [parameter.default]*parameter.cli_pattern_count
+			elif len(parameter.default) != parameter.cli_pattern_count:
+				raise Exception("Parameter pattern count and default values count do not match: {}.".format(parameter.name))
+		
+	if parameter.type == 'Bool':
+		if parameter.default and parameter.default.lower() not in ['true', 'false']:
 			raise Exception("parameter.default not true or false and parameter.type == Bool")
-			
-		if not parameter.multiplicity == '*' and parameter.multiplicity <= 0:
-			raise Exception("Multiplicity must be greater than zero: {param}.".format(param=parameter.name))
 		
-		if not parameter.nonpositional and parameter.multiplicity not in [1, '*']:
-			raise Exception("Multiplicity for positional parameters must be either 1 or '*': {param}.".format(param=parameter.name))
-			
-		if not parameter.multiplicity == 1 and parameter.type == "Bool":
-			raise Exception("Multiplicity for Bool type parameters must be 1: {param}.".format(param=parameter.name))
-			
-		# requires [nonpositional, cli_pattern_count, all_patterns, cli_pattern_vars]
-		if parameter.nonpositional:
-			if parameter.cli_pattern_count not in [1, '*'] and len(parameter.default) != parameter.cli_pattern_count:
-				raise Exception("Parameter pattern count and default values count do not match.")
-			for pattern in parameter.all_patterns:
-				if element_type(pattern) == "StringParamPattern":
-					if parameter.type == "Bool":
-						raise Exception('Non boolean cli pattern in Bool type parameter: {param}.'.format(param=parameter.name))
-					if pattern.count_char and not parameter.type == "Num":
-						raise Exception('Counter pattern in non Num type parameter: {param}.'.format(param=parameter.name))
-					if parameter.cli_pattern_count != get_cli_pattern_count(pattern):
-						raise Exception('Different parameter count values encountered in cli patterns for parameter: {param}'.format(param=parameter.name))
-					if pattern.vars:
-						if not (len(parameter.cli_pattern_vars) == len(pattern.vars) and 
-								all([parameter.cli_pattern_vars[i] == pattern.vars[i] for i in range(0,len(pattern.vars))])):
-							raise Exception("Different argument names found for patterns in parameter: {}".format(parameter.name))
-				elif element_type(pattern) in ['BoolWithPositivePattern', 'BoolNegativeOnlyPattern'] and not parameter.type == "Bool":
-					raise Exception('Boolean cli pattern in non Bool type parameter: {param}.'.format(param=parameter.name))
+		# add parameter.none_allowed
+		parameter.none_allowed = parameter.default is None or [p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]
 		
+	# date_format
+	if not parameter.date_format and parameter.type == 'Date':
+		parameter.date_format = "%d.%m.%Y"
+	
+	# choices
+	if parameter.choices and not parameter.type == 'Choice':
+		raise Exception('choices in not Choice parameter: {}'.format(parameter.name))
+	
+	if element_type(parameter) == 'Choice' and not parameter.choices:
+		raise Exception('choices required in Choice')
+	
+	# constraints
+	for constraint in parameter.constraints:
+		supported_constraints = {
+		 'Str':[],
+		 'Choice':[],
+		 'Num':[],
+		}[element_type(parameter)]
+		if constraint.type not in supported_constraints:
+			raise Exception('constraint.type unsupported')
+
 # -------------------------------
 
 def process_cli_or_group(or_group):
@@ -277,6 +273,24 @@ def process_cli_or_group(or_group):
 			print('warning: CliOptionalGroup in or_group')
 
 # ------------------------------- SECOND PASS -------------------------------
+	
+def process_cli_separator(cli_separator):
+# fix model structure
+	cli_separator.value = cli_separator.value[0]
+	
+	# usage_repr
+	cli_separator.usage_repr = cli_separator.value
+	
+	# fill cmd.cli_separators
+	cmd = parent_command(cli_separator)
+	add_cli_separator_attr(cmd)
+	cmd.cli_separators.append(cli_separator.value)
+	
+def add_cli_separator_attr(command):
+	if not hasattr(command, 'cli_separators'):
+		command.cli_separators = []
+
+# -------------------------------
 
 class ReferenceResolver:
 	def __init__(self, parameter_instances, command_instances, imports):
@@ -441,9 +455,9 @@ def validate_command(command, parents):
 		if parameter.name in [p.name for p in script.free_parameters] and not parameter in script.free_parameters:
 			raise Exception('Parameter name collision between {cmd}.{param} and a top level free parameter.'.format(cmd=command.name, param=parameter.name))
 			
-		if parameter.default_is_none:
+		if parameter.default is None:
 			if all([is_parameter_required(parameter, u) for u in command.usages]):
-				print('Warning: parameter.default == None and parameter is required in all usage patterns.')
+				print('Warning: parameter.default is None and parameter is required in all usage patterns.')
 	
 	for sub_command in command.sub_commands:
 		if sub_command.name in [c.name for c in script.free_commands] and not sub_command in script.free_commands:
@@ -492,36 +506,39 @@ def parameter_declaration_check(command):
 
 # ------------------------------- PARSER FUNCTIONS -------------------------------
 
-def parse(script_path):
+def parse(script_path, grammar_path='cid_grammar.tx'):
 	
-	metamodel = metamodel_from_file('cid_grammar.tx')
+	metamodel = metamodel_from_file(grammar_path)
 	
-	# first pass ---------------------
-	
-	command_processor = CommandProcessor()
-	parameter_processor = ParameterProcessor()
+	# FIRST PASS ---------------------
 	
 	metamodel.register_obj_processors({
 		'Script':process_script,
 		'ImportStatement':process_import_statement,
 		'ParameterReference':process_import_reference,
 		'CommandReference':process_import_reference,
-		'Command':command_processor.process_command,
-		'Parameter':parameter_processor.process_parameter,
+		'Command':process_command,
+		'Parameter':process_parameter,
 		'CliOrGroup':process_cli_or_group,
 	})
 	
 	model = metamodel.model_from_file(script_path)
 	
-	all_defined_commands = command_processor.all_defined_commands
-	all_defined_parameters = parameter_processor.all_defined_parameters
+	# EXTRACT DATA ---------------------
 	
-	# dereferencing ---------------------
+	model_extractor = ElementExtractor()
+	ModelProcessor(model_extractor.visitor).process_model(model)
+	
+	all_defined_commands = model_extractor.all_commands
+	all_defined_parameters = model_extractor.all_parameters
+	
+	# DEREFERENCE ---------------------
 	
 	ModelProcessor(ReferenceResolver(all_defined_parameters, all_defined_commands, model.imports).visitor).process_model(model)
 	
-	# second pass ---------------------
+	# SECOND PASS ---------------------
 	
+	ModelProcessor({'CliSeparator':process_cli_separator, 'Command':add_cli_separator_attr}).process_model(model)
 	ModelProcessor({'Command':add_id, 'Parameter':add_id}).process_model(model)
 	ModelProcessor({'Command':set_usage_defaults}).process_model(model)
 	ModelProcessor(_gather_usage_sub_elements_visitor).process_model(model)
@@ -530,6 +547,3 @@ def parse(script_path):
 	ModelProcessor({'Command':validate_command}).process_model(model)
 	
 	return model
-	
-	
-# logicke checkove u defaults i transform, dodatne u check []

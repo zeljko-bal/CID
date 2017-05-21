@@ -1,13 +1,17 @@
 
+{#- <!-- ---------------- HTML STRUCTURE MACROS ---------------- --> -#}
+
+{#- <!-- GUI STRUCTURE --> -#}
 {%- macro gui_structure(structure) %}
 	{%- for element in structure.elements %}
-		{{- gui_element(element)|tab_indent }}
+		{{- gui_element(element, structure)|tab_indent }}
 	{%- endfor %}
 {%- endmacro -%}
 
-{%- macro gui_element(element) %}
+{#- <!-- GUI ELEMENT --> -#}
+{%- macro gui_element(element, parent) %}
 {%- if element|element_type == 'GuiTabs' -%}
-<div class="z-depth-1" style="padding:7px;">
+<div class="tabs-wrapper z-depth-1" style="padding:7px;">
 	<ul id = "{{'tabs'|new_unique_id}}" class="tabs">
 		{%- for tab in element.elements %}
 		<li class="tab"><a{% if loop.index == 1%} class="active"{% endif %} href="#{{'tabs'|current_unique_id}}_{{loop.index}}">{{tab.title}}</a></li>
@@ -20,10 +24,10 @@
 	{%- endfor %}
 </div>
 {%- elif element|element_type == 'GuiSectionGroup' %}
-<div style="padding:7px;">
+<div class="section-group-wrapper" style="padding:7px;">
 	<ul class="collapsible{% if element.exclusive %} popout{% endif %}" data-collapsible="{% if element.exclusive %}accordion{% else %}expandable{% endif %}">
 		{%- for section in element.elements %}
-		<li>
+		<li data-gui-id="{{section|gui_id(element, 'GuiSection')}}">
 			<div class="collapsible-header{% if element.exclusive %} exclusive-section{% endif %}{% if section.expanded %} active{% endif %}">
 				<i class="material-icons section-check-icon">{% if not element.exclusive %}toc{% else %}{% if section.expanded %}check_circle{% else %}radio_button_unchecked{% endif %}{% endif %}</i>
 				{{section.title}}
@@ -37,9 +41,9 @@
 	</ul>
 </div>
 {%- elif element|element_type == 'GuiSection' %}
-<div style="padding:7px;">
+<div class="section-wrapper" style="padding:7px;">
 	<ul class="collapsible" data-collapsible="expandable">
-		<li>
+		<li data-gui-id="{{element|gui_id(parent, 'GuiSection')}}">
 			<div class="collapsible-header{% if element.expanded %} active{% endif %}{% if element.optional %} optional-section{% endif %}">
 				<i class="material-icons section-check-icon">{% if not element.optional %}toc{% else %}{% if element.expanded %}check_circle{% else %}radio_button_unchecked{% endif %}{% endif %}</i>
 				{{element.title}}
@@ -52,7 +56,7 @@
 	</ul>
 </div>
 {%- elif element|element_type == 'GuiGrid' -%}
-<div style="padding:7px;">
+<div class="grid-wrapper" style="padding:7px;">
 	<table>
 		{%- for row in element.elements %}
 		{{ gui_grid_row(row)|tab_indent }}
@@ -60,122 +64,289 @@
 	</table>
 </div>
 {%- elif element|element_type == 'Parameter' -%}
-{{- gui_parameter(element) }}
+{{- gui_parameter(element, parent) }}
 {%- endif -%}
 {%- endmacro -%}
 
+{# <!-- GUI GRID ROW --> TODO merge with gui_element [?] #}
 {%- macro gui_grid_row(row) %}
+<tr class="grid-row-wrapper">
+{%- for cell in row.elements if cell|element_type in ['Parameter', 'EmptyCell'] %}
+	{%- set dim = row.dimensions[loop.index-1] %}
+	<td {%- if dim.colspan and dim.colspan != 1 %} colspan="{{dim.colspan}}"{% endif %} style="min-width: {% if cell|element_type == 'Parameter' and cell.type == 'Bool' %}1{% else %}{{dim.width}}{% endif %}%;">
+	{%- if cell|element_type == 'Parameter' %}
+		{{- gui_parameter(cell, row, dim.colspan, dim.width, inline_description=False)|tab_indent() }}
+	{%- endif %}
+	</td>
+{%- endfor %}
+</tr>
 <tr>
-	{%- for cell in row.elements %}
-		{%- set dim = row.dimensions[loop.index-1] %}
-		<td{% if dim.colspan != 1 %} colspan="{{dim.colspan}}"{% endif %} style="min-width: {% if cell|element_type == 'Parameter' and cell.type == 'Bool' %}1{% else %}{{dim.width}}{% endif %}%;">
-		{%- if cell|element_type == 'Parameter' %}
-			{{- gui_parameter(cell, dim.colspan, dim.width)|tab_indent(2) }}
-		{%- endif %}
-		</td>
+	<td colspan="{{row.elements|length}}" style="padding:0px;">
+	{%- for cell in row.elements if cell|element_type == 'Parameter' and cell.description -%}
+		{{ param_description(cell, show_title=True)|tab_indent() }}
 	{%- endfor %}
+	</td>
 </tr>
 {%- endmacro -%}
 
-{%- macro param_title(element, i=None) -%}
-{{element.title}}{% if element.nonpositional and i != None %} : {% if element.cli_pattern_vars %}{{element.cli_pattern_vars[i]}}{% else %}{{i+1}}{% endif %}{% endif %}
+{#- <!-- GUI PARAMETER --> -#}
+{%- macro gui_parameter(element, parent, colspan=1, width=0, inline_description=True) %}
+<div class="parameter-wrapper {#tooltipped#}" data-param-id="{{element.id}}" data-gui-id="{{element|gui_id(parent, element.id)}}" data-param-type="{{element.type}}" data-position="bottom" data-delay="900" data-tooltip="{{element.description}}" style="padding:15px; display:flex; align-items:flex-start;">
+{%- if element.type == 'Bool' %}
+	<div style="flex-grow: 0;">
+		<input type="checkbox" id="{{(element.id+'_cb')|new_unique_id}}"{% if element.none_allowed %} class="tristate-checkbox"{% endif %}{% if element.default == None %} readonly{% elif element.default|lower == 'true' %} checked{% endif %}/>
+		<label for="{{(element.id+'_cb')|current_unique_id}}" style="white-space: nowrap;">{{element.title}}</label>
+		{%- if element.default == None %}
+		<script>document.getElementById("{{(element.id+'_cb')|current_unique_id}}").indeterminate = true;</script>
+		{%- endif %}
+	</div>
+{%- elif element.type in ['Str', 'Num', 'Date', 'File', 'Choice'] %}
+	{%- if element.type == 'Str' and element.empty_str_allowed %}
+	<div style="width: 40px; flex-grow: 0;">
+		<div class="none-switch switch" style="left:15px; top:45px;">
+			<label>
+				<input type="checkbox"{% if element.default != None %} checked{% endif %}/>
+				<span class="lever"></span>
+			</label>
+		</div>
+	</div>
+	{%- endif %}
+
+	{%- set count_many = True if element.cli_pattern_count != 1 else False %}
+	
+	{%- if not count_many and not element.multiplicity == '*' %}
+	<div style="flex-grow: {% if element.type == 'Num' %}0{% else %}1{% endif %};">
+		{{- input_field_body(element)|tab_indent(3) }}
+	</div>
+	{%- elif (count_many and not element.multiplicity == '*') or (not count_many and element.multiplicity == '*') %}
+	{%- set count = 1 if element.multiplicity == '*' or element.cli_pattern_count == '*' else element.cli_pattern_count %}
+	{{- input_list(element, count) }}
+	{%- else %}
+	<ul class="collection input-collection">
+		<li class="collection-item" style="padding-bottom:0px;">
+			<span>{{element.title}}</span>
+			<a href="#!" class="secondary-content add-input-collection-item-btn"><i class="material-icons">playlist_add</i></a>
+		</li>
+		<li class="collection-item" style="border-style:none solid solid solid; border-width:1px; border-color:grey grey grey #bababa; position:relative;">
+			{%- set count = 1 if element.cli_pattern_count == '*' else element.cli_pattern_count %}
+			{{- input_list(element, count)|tab_indent(2) }}
+			<a class="remove-input-collection-item-btn" href="#!" style="visibility: hidden;"><i class="material-icons" style="position:absolute; top:3px; right:3px;">delete_sweep</i></a>
+		</li>
+	</ul>
+	{%- endif %}
+{%- endif %}
+{%- if element.description or element.help %}
+	<!-- More options: description, help -->
+	<div class="more-options-btn" {%- if element.type != 'Bool' %} style="position:relative; top:{%- if element.multiplicity == '*' and count_many %}10px;{% else %}30px;{% endif %}{% endif %}">
+		<a href="#!" class="dropdown-button" data-activates="{{(element.id+'_dropdown')|new_unique_id}}" data-beloworigin="true" data-alignment="right" data-constrainwidth="false"><i class="material-icons">more_vert</i></a>
+		<ul id="{{(element.id+'_dropdown')|current_unique_id}}" class='dropdown-content'>
+			{%- if element.description %}
+			<li><a class="desc-btn" data-shows="{{(element.id+'_desc')|new_unique_id}}" href="#!"><i class="material-icons" style="position:relative; top:6px; padding-right:5px;">info_outline</i>Description</a></li>
+			{%- endif %}
+			{%- if element.help %}
+			<li><a class="modal-trigger" href="#{{(element.id+'_help')|new_unique_id}}"><i class="material-icons" style="position:relative; top:6px; padding-right:5px;">help_outline</i>Help</a></li>
+			{%- endif %}
+		</ul>
+	</div>
+{%- endif %}
+</div>
+{%- if inline_description -%}
+	{{ param_description(element) }}
+{%- endif %}
+{%- if element.help %}
+<div id="{{(element.id+'_help')|current_unique_id}}" class="modal">
+	<div class="modal-content">
+		<h5>{{element.title}}</h5>
+		<p>{{element.help}}</p>
+	</div>
+	<div class="modal-footer">
+		<a href="#!" class="modal-action modal-close btn-flat">Close</a>
+	</div>
+</div>
+{%- endif %}
 {%- endmacro -%}
 
-{%- macro param_id(element, i=None) -%}
+{%- macro input_list(element, count) %}
+{%- set count_n = True if element.cli_pattern_count not in ['*', 1] else False %}
+<ul class="input-list">
+	{%- for i in range(0, count) %}
+	<li>
+		{{- input_field_body(element, i, count_n)|tab_indent() }}
+	</li>
+	{%- endfor %}
+	{%- if not count_n %}
+	<li style="position:relative;">
+		<a href="#!" class="add-input-field-btn" style="position:absolute; bottom:-10px; right:0px;"><i class="material-icons">add_box</i></a>
+	</li>
+	{%- endif %}
+</ul>
+{%- endmacro -%}
+
+{#- <!-- PARAMETER DESCRIPTION --> -#}
+{%- macro param_description(element, show_title=False) %}
+{%- if element.description %}
+<div id="{{(element.id+'_desc')|current_unique_id}}" class="card-panel teal lighten-1 description-card" style="display:none; position:relative; margin-left:5px; margin-right:5px;">
+	{%- if show_title %}
+	<h6 class="white-text" style="font-weight: bold;">{{element.title}}:</h6>
+	{%- endif %}
+	<span class="white-text">
+	{{element.description}}
+	</span>
+	<a href="#!" class="close-desc-button"><i class="material-icons text-white" style="position:absolute; top:3px; right:3px;">close</i></a>
+</div>
+{%- endif %}
+{%- endmacro -%}
+
+{#- <!-- HELPERS --> -#}
+{%- macro multi_param_title(element, i=None) -%}
+{{element.title}}{% if i != None %} : {% if element.nonpositional and element.cli_pattern_vars %}{{element.cli_pattern_vars[i]}}{% else %}{{i+1}}{% endif %}{% endif %}
+{%- endmacro -%}
+
+{%- macro multi_param_id(element, i=None) -%}
 {{element.id}}{% if i != None %}:{{i}}{% endif %}
 {%- endmacro -%}
 
-{%- macro gui_parameter(element, colspan=1, width=0) %}
-<div style="padding:15px;">
-	<div style="display:flex; align-items:flex-start;">
-{%- if element.type == 'Bool' %}
-		<div style="flex-grow: 1;">
-			<input type="checkbox" id="{{element.id|new_unique_id}}"{% if element.none_value_allowed %} class="tristate-checkbox"{% endif %}{% if element.default == None %} readonly{% elif element.default|lower == 'true' %} checked{% endif %}/>
-			<label for="{{element.id|current_unique_id}}" style="white-space: nowrap;">{{element.title}}</label>
-			{%- if element.default == None %}
-			<script>document.getElementById("{{element.id|current_unique_id}}").indeterminate = true;</script>
-			{%- endif %}
-		</div>
-{%- elif element.type in ['Str', 'Num', 'Date', 'File', 'Choice'] %}
-	{%- if element.none_value_allowed and element.type == 'Str' %}
-		<div style="width:40px;">
-			<div class="none-switch switch" style="left:15px; top:45px;">
-				<label>
-					<input id="{{element.id}}_none_switch" type="checkbox"{% if element.default != None %} checked{% endif %}/>
-					<span class="lever"></span>
-				</label>
-			</div>
-		</div>
-	{%- endif %}
-	
-	{%- set count_many = True if element.nonpositional and element.cli_pattern_count != 1 else False %}
-	
-	{%- if not count_many and not element.multiplicity == '*' %}
-		<div style="flex-grow: 1;">
-			{{- multi_parameter_body(element)|tab_indent(3) }}
-		</div>
-	{%- elif (count_many and not element.multiplicity == '*') or (not count_many and element.multiplicity == '*') %}
-		<ul style="display:flex; flex-direction:column; flex-grow: 1;">
-			{%- set count = 1 if element.multiplicity == '*' or element.cli_pattern_count == '*' else element.cli_pattern_count %}
-			{%- for i in range(0, count) %}
-			<li>
-				{{- multi_parameter_body(element, i)|tab_indent(4) }}
-			</li>
-			{%- endfor %}
-		</ul>
-	{%- else %}
-		<ul class="collection" style="display:flex; flex-direction:column; flex-grow: 1;">
-			<li class="collection-item">
-				<span>{{element.title}}</span>
-				<a href="#!" class="secondary-content"><i class="material-icons">playlist_add</i></a>
-			</li>
-			<li class="collection-item" style="border-style:none solid solid solid; border-width:1px; border-color:grey grey grey #bababa; position:relative;">
-				<ul style="display:flex; flex-direction:column;">
-					{%- set count = 1 if element.cli_pattern_count == '*' else element.cli_pattern_count %}
-					{%- for i in range(0, count) %}
-					<li>
-						{{- multi_parameter_body(element, i)|tab_indent(4) }}
-					</li>
-					{%- endfor %}
-				</ul>
-				<a href="#!"><i class="material-icons teal-text text-lighten-2" style="position:absolute; top:3px; right:3px;">delete_sweep</i></a>
-			</li>
-		</ul>
-	{%- endif %}
-{%- endif %}
-	</div>
-</div>
-{%- endmacro -%}
-
-{%- macro multi_parameter_body(element, i=None) -%}
+{# <!-- INPUT FIELD BODY --> #}
+{%- macro input_field_body(element, i=None, count_n=False) -%}
 {%- set list_item = True if i != None else False %}
-<div class="input-field{% if element.type == 'Num' %} number-input-wrapper{% elif element.type == 'File' %} file-field{% endif %}"> <!--TODO number-input-wrapper i flex-grow: 1; -->
+<div class="input-field {%- if element.type == 'Num' %} number-input-wrapper {%- elif element.type == 'File' %} file-field{% endif %}" data-input-id="{{multi_param_id(element, i)}}">
 {%- if element.type in ['Str', 'Num', 'Date'] %}
-	<input id="{{param_id(element, i)}}" type="{% if element.type == 'Str' %}text{% elif element.type == 'Num' %}number{% elif element.type == 'Date' %}date{% endif %}"{% if element.type == 'Date' %} class="datepicker"{% endif %}{% if element.default %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% elif element.default == None %} disabled{% endif %}/>
-	<label for="{{param_id(element, i)}}">{{param_title(element, i)}}</label>
+	<input id="{{multi_param_id(element, i)}}" type="{% if element.type == 'Str' %}text{% elif element.type == 'Num' %}number{% elif element.type == 'Date' %}date{% endif %}"{% if element.type == 'Date' %} class="datepicker"{% endif %}{% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% elif element.type == 'Str' and element.empty_str_allowed %} disabled{% endif %}/>
+	<label for="{{multi_param_id(element, i)}}">{{multi_param_title(element, i)}}</label>
 {%- elif element.type == 'File' %}
 	<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
 		<i class="material-icons left">insert_drive_file</i> <!-- folder ili file ikona po ogranicenju -->
-	<span>{{param_title(element, i)}}</span>
+		<span>{{multi_param_title(element, i)}}</span>
 		<input type="file"/> <!--webkitdirectory dodati za ogranicenje directory-->
 	</div>
 	<div class="file-path-wrapper">
-		<input id="{{param_id(element, i)}}" class="file-path validate" type="text"{% if element.default == None %} disabled{% endif %}/>
+		<input id="{{multi_param_id(element, i)}}" class="file-path validate" type="text"/>
 	</div>
 {%- elif element.type == 'Choice' %}
 	<div style="padding-bottom:1px;">
-		<select id="{{param_id(element, i)}}">
+		<select id="{{multi_param_id(element, i)}}">
 			<option value="" selected style="border-style: solid; border-width:2px;border-color:black;"></option>
 			{%- for choice in element.choices %}
 			<option value="{{choice}}">{{choice}}</option>
 			{%- endfor %}
 		</select>
-		<label>{{param_title(element, i)}}</label>
+		<label>{{multi_param_title(element, i)}}</label>
 	</div>
 {%- endif %}
-	{%- set count_n = True if element.nonpositional and element.cli_pattern_count not in ['*', 1] else False %}
-	{%- if list_item and not count_n %}<a href="#!" class="add-input-field" style="position:absolute; bottom:-10px; right:0px;"><i class="material-icons">add_box</i></a>{% endif %}
+{%- if list_item and not count_n %}
+	<a href="#!" class="remove-input-field-btn" style="position:absolute; right:{% if element.type == 'Choice' %}10{% else %}0{% endif %}px; top:18px; visibility: hidden;"><i class="material-icons">clear</i></a>
+{%- endif %}
 </div>
+{%- endmacro -%}
+
+{#- <!-- ---------------- JS VIEW-MODEL MACROS ---------------- --> -#}
+
+{%- macro gui_structure_js(structure) %}
+	{%- for element in structure.elements %}
+		{{- gui_element_js(element, structure)|tab_indent }},
+	{%- endfor %}
+{%- endmacro -%}
+
+{%- macro gui_element_js(element, parent) %}
+{%- if element|element_type == 'Parameter' %}
+new GuiParameter('{{element|gui_id(parent, element.id)}}', parameter_models['{{element.id}}'])
+{%- else %}
+new {% if element|element_type == 'GuiSection' %}GuiSectionGroup{% else %}{{element|element_type}}{% endif %}(
+	{%- if element|element_type == 'GuiTabs' -%}
+	[
+		{%- for tab in element.elements %}
+		new GuiTab([
+			{{- gui_structure_js(tab.body)|tab_indent(2) }}
+		]),
+		{%- endfor %}
+	]
+	{%- elif element|element_type == 'GuiSectionGroup' %}
+	{{element.exclusive|js_bool}}, // exclusive
+	[
+		{%- for section in element.elements %}
+		new GuiSection('{{section|gui_id(element, 'GuiSection')}}',
+		[
+			{{- gui_structure_js(section.body)|tab_indent(2) }}
+		]),
+		{%- endfor %}
+	]
+	{%- elif element|element_type == 'GuiSection' %}
+	{{element.optional|js_bool}}, // exclusive
+	[
+		new GuiSection('{{element|gui_id(parent, 'GuiSection')}}',
+		[
+			{{- gui_structure_js(element.body)|tab_indent(2) }}
+		])
+	]
+	{%- elif element|element_type == 'GuiGrid' -%}
+	[
+		{%- for row in element.elements %}
+		new GuiGridRow([
+			{{- gui_structure_js(row)|tab_indent(2) }}
+		]),
+		{%- endfor %}
+	]
+	{%- endif %}
+)
+{%- endif %}
+{%- endmacro -%}
+
+{#- <!-- ---------------- JS USAGE-MODEL MACROS ---------------- --> -#}
+
+{%- macro cli_element(element) %}
+{%- if element|element_type == 'CliOrGroup' -%}
+new OrGroup([
+	{%- for or_el in element.elements %}
+{{ cli_element(or_el)|tab_indent }},
+	{%- endfor %}
+])
+{%- elif element|element_type == 'CodeBlock' %}
+new CodeBlock(function(context)
+{
+{{element.code}}
+}),
+{%- elif element|element_type == 'CliGroup' -%}
+new ParameterGroup([
+	{%- for el in element.elements %}
+{{ cli_element(el)|tab_indent }},
+	{%- endfor %}
+])
+{%- elif element|element_type == 'CliOptionalGroup' -%}
+	{%- if element.elements|length > 1 %}
+new OptionalElement([
+		{%- for el in element.elements %}
+{{ cli_element(el)|tab_indent }},
+		{%- endfor %}
+])
+	{%- else -%}
+new OptionalElement([{{ cli_element(element.elements|first) }}])
+	{%- endif %}
+{%- elif element|element_type == 'CliSeparator' -%}
+new ParameterSeparator('{{element.value}}')
+{%- elif element|element_type == 'Parameter' -%}
+new ParameterUsage(parameter_models['{{element.id}}'])
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro usage_model(usage) %}new ParameterGroup([
+	{%- for element in usage.elements %}
+{{ cli_element(element)|tab_indent }},
+	{%- endfor %}
+	{%- if usage.has_subcommand %}
+	new SubCommand(),
+	{%- endif %}
+])
+{%- endmacro -%}
+
+{%- macro usages_model(usages) %}
+{%- if usages|length > 1 %}new OrGroup([
+	{%- for usage in usages %}
+{{ usage_model(usage)|tab_indent }},
+	{%- endfor %}
+])
+{%- else %}
+{{- usage_model(usages|first) }}
+{%- endif %}
 {%- endmacro -%}
 
 <!DOCTYPE html>
@@ -186,96 +357,22 @@
 		<link rel="stylesheet" href="materialize/css/material-icons.css">
 		<!--Import materialize.css-->
 		<link type="text/css" rel="stylesheet" href="materialize/css/materialize.css"  media="screen,projection"/>
+		<!--Import cid_framework.css-->
+		<link type="text/css" rel="stylesheet" href="cid/css/framework.css"  media="screen,projection"/>
 		<!--Import custom.css-->
 		<link type="text/css" rel="stylesheet" href="custom/css/custom.css"  media="screen,projection"/>
 	</head>
     <body>
-		<style>
-			.select-wrapper .dropdown-content li:first-child
-			{
-				border-bottom-style: dashed;
-				border-bottom-width: 1px;
-				border-color: #cccccc;
-			}
-			
-			nav
-			{
-				background-color: #bdbdbd;
-				line-height: 36px;
-				height: 36px;
-				padding-left: 15px;
-				margin-bottom: 35px;
-			}
-			
-			tr.has-textarea td
-			{
-				vertical-align: top;
-			}
-			.collapsible-body, .tab-body
-			{
-				//padding-top: 25px;
-			}
-			.switch label .lever
-			{
-				margin: 0px;
-			}
-			
-			input[type=number]::-webkit-inner-spin-button
-			{ 
-				height:40px;
-			}
-			
-			.number-input-wrapper
-			{
-				max-width:15em;
-			}
-			
-			.sub-command-wrapper
-			{
-				white-space: nowrap;
-				margin-top: 5px;
-				vertical-align: top;
-			}
-			.sub-command-wrapper button
-			{
-				padding-left:15px;
-				padding-right:10px;
-			}
-			.sub-command-wrapper button span
-			{
-				vertical-align: top;
-				margin-right:5px;
-			}
-			.sub-command-wrapper button i
-			{
-				font-size: 1.5rem;
-			}
-			
-			div.switch.none-switch
-			{
-				width:1px;
-				transform: rotate(-90deg) scale(0.85, 0.85);
-				position:relative;
-				right:5px;
-				top:45px;
-			}
-			div.switch.none-switch input
-			{
-				display:none;
-			}
-			
-			.command-panel td
-			{
-				padding-top: 10px;
-				padding-bottom: 10px;
-			}
-			
-		</style>
 		<div class="container">
-			<h4>{{root_command_name}}</h4>
 			{%- for command in commands %}
 				{%- if command.parameters or command.sub_commands %}
 			<div id="{{command.id}}" class="command-panel"{% if command.id != root_command_id %} style="display:none;"{% endif %}>
+				<div style="display:flex; align-items:baseline;">
+					<h4 style="flex-grow: 1;">{{command.title}}</h4>
+					{%- if command.help %}
+					<a href="#{{command.id}}_command_help" class="modal-trigger {#tooltipped#}" data-position="bottom" data-delay="700" data-tooltip="{{command.title}} Help" style="flex-grow: 0;"><i class="material-icons small right" style="position:relative; top:10px;">help</i></a>
+					{%- endif %}
+				</div>
 				{%- if command.id != root_command_id %}
 				<nav>
 					{%- for parent_command in command|all_parent_commands %}
@@ -287,29 +384,57 @@
 				<hr/>
 				{%- endif %}
 				{%- if command.description %}
-				<div class="command-description">
+				<div class="card-panel white" style="padding-top: 5px; padding-bottom: 5px;">
 					<p>{{command.description}}</p>
 				</div>
-				{%- endif -%}
+				{%- endif %}
+				<div class="parameter-section">
 				{{- gui_structure(command.gui)|tab_indent(4) }}
+				</div>
 				<hr/>
+				{%- if command.sub_commands %}
 				<table class="bordered">
 					{%- for sub_command in command.sub_commands %}
 					<tr>
 						<td class="sub-command-wrapper">
-							<button  data-command-id="{{sub_command.id}}" type="button" class="btn{% if sub_command.parameters or sub_command.sub_commands %} sub-command-button{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
+							<button data-command-id="{{sub_command.id}}" type="button" class="btn{% if sub_command.parameters or sub_command.sub_commands %} sub-command-button{% else %} green waves-effect waves-light{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
 						</td>
 						<td style="width: 15px;"/>
 						<td>
 							{{sub_command.description}} asdasd sdfsd asd
 						</td>
+						<td>
+							{%- if sub_command.help %}
+							<a href="#{{sub_command.id}}_command_help" class="modal-trigger {#tooltipped#}" data-position="bottom" data-delay="700" data-tooltip="{{sub_command.title}} Help"><i class="material-icons">help</i></a>
+							{%- endif %}
+						</td>
 					</tr>
 					{%- endfor %}
 				</table>
+				{%- endif %}
+			</div>
+				{%- endif %}
+				{%- if command.help %}
+			<div id="{{command.id}}_command_help" class="modal">
+				<div class="modal-content">
+					<h5>{{command.title}}</h5>
+					<p>{{command.help}}</p>
+				</div>
+				<div class="modal-footer">
+					<a href="#!" class=" modal-action modal-close btn-flat">Close</a>
+				</div>
 			</div>
 				{%- endif %}
 			{%- endfor %}
+			<div class="card-panel blue-grey darken-1 white-text text-darken-2">
+				<span style="-webkit-user-select: none;">> </span><span id="cli-text">{{root_command_name}}</span> <span id="sub-command-cli-text"><span>
+			</div>
+			<div style="white-space: nowrap; margin-top: 5px; vertical-align: top;">
+				<a id="cancel-btn" class="waves-effect waves-light btn red left"><i class="material-icons right">cancel</i>Cancel</a>
+				<a id="execute-btn" class="waves-effect waves-light btn green right"><i class="material-icons right">play_arrow</i>Execute</a>
+			</div>
 		</div>
+		
 		<br/><br/><br/><br/><br/><br/><br/><br/><br/>
 		
 		<!-- Script imports -->
@@ -325,134 +450,53 @@
 		<!-- Import custom.js -->
 		<script type="text/javascript" src="custom/js/custom.js"></script>
 		
+		<!-- Import gui model -->
+		<script type="text/javascript" src="cid/js/model.js"></script>
+		
+		<!-- Import framework code -->
+		<script type="text/javascript" src="cid/js/framework.js"></script>
+		
 		<!-- script-import hack for electron -->
 		<script>if (window.module) module = window.module;</script>
 	</body>
 	
 	<script>
+		var parameter_models = 
+		{
+			{%- for parameter in parameters %}
+			'{{parameter.id}}':new ParameterModel({type:'{{parameter.type}}', id:'{{parameter.id}}' 
+				{%- if parameter.multiplicity != 1 %}, multiplicity:{{parameter.multiplicity|stringify}}{% endif %}
+				{%- if parameter.cli_pattern_count != 1 %}, count:{{parameter.cli_pattern_count|stringify}}{% endif %}
+				{%- if parameter.nonpositional and parameter.cli_pattern_vars %}, vars:{{parameter.cli_pattern_vars}}{% endif %}
+				{%- if parameter.empty_str_allowed %}, empty_str_allowed:true{% endif %}
+				{%- if parameter.nonpositional %}, prefix:'pref'{% endif %}
+				{%- if parameter.cli_separators %}, separator:'{{parameter.cli_separators[0]}}'{% endif %}
+				{%- if parameter.type == 'Bool' %}, bool_values:{positive:'pos', negative:'neg'}{% endif -%}
+			}),
+			{%- endfor %}
+		};
+		
+		var command_models = 
+		{
+			{%- for command in commands %}
+			'{{command.id}}':new CommandModel('{{command.cli_command}}',
+			{{- usages_model(command.usages)|tab_indent(3, start_from=2) }}
+			{%- if command.gui.elements %},
+			[
+				{{- gui_structure_js(command.gui)|tab_indent(3) }}
+			]
+			{%- endif %}),
+			{%- endfor %}
+		};
+		
+		function get_param_model(param)
+		{
+			return parameter_models[param.attr('data-param-id')];
+		}
+		
+		var current_commands = ['{{root_command_id}}'];
+	
 		// You can also require other files to run in this process
 		require('./renderer.js');
-		
-		// ------------------- MATERIALIZE INIT -------------------
-		
-		$('.datepicker').pickadate({
-			selectMonths: true, // Creates a dropdown to control month
-			selectYears: 15 // Creates a dropdown of 15 years to control year
-		});
-		
-		$('select').material_select();
-		
-		// ------------------- SECTION ICONS -------------------
-		
-		var activated_icon = 'check_circle';
-		var deactivated_icon = 'radio_button_unchecked';
-		
-		$('.collapsible-header.exclusive-section').click(function(event)
-		{
-			var current_section = $(this);
-			var section_group = current_section.parent().parent();
-			
-			var sections = section_group.children('li').children('div.collapsible-header');
-			
-			for(var i=0; i<sections.length; i++)
-			{
-				other_section = $(sections[i]);
-				
-				if(!other_section.is(current_section))
-				{
-					other_section.children('i.section-check-icon').text(deactivated_icon);
-				}
-			}
-			
-			if(current_section.hasClass('active'))
-			{
-				event.stopPropagation();
-			}
-			else
-			{
-				current_section.children('i.section-check-icon').text(activated_icon);
-			}
-		});
-		
-		$('.collapsible-header.optional-section').click(function()
-		{
-			var current_section = $(this);
-			if(current_section.hasClass('active'))
-			{
-				current_section.children('i.section-check-icon').text(deactivated_icon);
-				current_section.children('i.section-expand-icon').text('expand_more');
-			}
-			else
-			{
-				current_section.children('i.section-check-icon').text(activated_icon);
-				current_section.children('i.section-expand-icon').text('expand_less');
-			}
-		});
-		
-		// ------------------- COMMAND PANELS -------------------
-		
-		function toggle_command_panel()
-		{
-			var button = $(this);
-			var command_id = button.attr('data-command-id');
-			
-			var command_panels = $(".command-panel");
-			
-			for(var i=0; i<command_panels.length; i++)
-			{
-				command_panel = $(command_panels[i]);
-				
-				if(command_panel.attr('id') == command_id)
-				{
-					command_panel.fadeIn(200);
-				}
-				else
-				{
-					command_panel.hide();
-				}
-			}
-		}
-		
-		$('.sub-command-button').click(toggle_command_panel);
-		$('.parent-command-link').click(toggle_command_panel);
-		
-		// ------------------- TRISTATE CHECKBOX -------------------
-		
-		$(".tristate-checkbox").click(function() // add tri-state checkbox functionality
-		{
-			if (this.readOnly) this.checked=this.readOnly=false;
-			else if (!this.checked) this.readOnly=this.indeterminate=true;
-		});
-		
-		function get_checkbox_state(cb) // get checkbox state: true, false or null (intermidiate)
-		{
-			if(cb.indeterminate) return null;
-			else return cb.checked;
-		}
-		
-		// ------------------- NONE SWITCH -------------------
-		
-		$('.none-switch input').click(function(event)
-		{
-			var none_switch = $(event.delegateTarget);
-			var switch_id = none_switch.attr('id');
-			var param_id = switch_id.substring(0, switch_id.length - '_none_switch'.length);
-			
-			$('[id='+param_id+']').prop('disabled', !none_switch.prop('checked'));
-		});
-		
-		// -------------------
-		
-		
-		
-		$('.add-input-field').click(function()
-		{
-			var input_field = $(this);
-			
-			
-			
-			
-		});
-		
 	</script>
 </html>

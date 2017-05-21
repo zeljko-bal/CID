@@ -12,24 +12,6 @@ from model_printer import print_model
 
 # ------------------------------- CLI MODEL PROCESSORS -------------------------------
 
-def process_cli_separator(cli_separator):
-	# fix model structure
-	cli_separator.value = cli_separator.value[0]
-	
-	# usage_repr
-	cli_separator.usage_repr = cli_separator.value
-	
-	# fill cmd.cli_separators
-	cmd = parent_command(cli_separator)
-	add_cli_separator_attr(cmd)
-	cmd.cli_separators.append(cli_separator.value)
-	
-def add_cli_separator_attr(command):
-	if not hasattr(command, 'cli_separators'):
-		command.cli_separators = []
-
-# -------------------------------
-
 class ParameterProcessor:
 	def __init__(self):
 		self.all_prefixes = []
@@ -133,12 +115,6 @@ def cli_pattern_repr(pattern):
 			return pattern.positive, None
 		elif pattern.negative:
 			return None, pattern.negative
-			
-# -------------------------------
-
-def command_defaults(command):
-	if not command.cli_command:
-		command.cli_command = command.name
 
 # -------------------------------
 
@@ -390,12 +366,6 @@ def parameter_model_filter(parameter):
 				prefixes = [p.prefix for p in patterns]
 				ret.append("BasicNonpositional('{name}', {prefixes})".format(name=parameter.name, prefixes=print_list(prefixes)))
 		return ', '.join(ret)
-	
-def stringify_filter(value):
-	if isinstance(value, str):
-		return "'{}'".format(value)
-	else:
-		return value
 		
 def have_sub_commands_filter(commands):
 	return any([c.sub_commands for c in commands])
@@ -403,9 +373,7 @@ def have_sub_commands_filter(commands):
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
 def process_model(model):
-	ModelProcessor({'CliSeparator':process_cli_separator, 'Command':add_cli_separator_attr}).process_model(model)
 	ModelProcessor({'Parameter':ParameterProcessor().process_parameter}).process_model(model)
-	ModelProcessor({'Command':command_defaults}).process_model(model)
 	ModelProcessor(_usage_repr_visitor).process_model(model)
 	ModelProcessor({'Command':add_builtin_help}).process_model(model)
 	ModelProcessor({'Command':validate_command}).process_model(model)

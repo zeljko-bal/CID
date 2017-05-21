@@ -126,7 +126,7 @@ CommandReference:
 
 // TODO automatic keywords u metamodel
 KeyWord:
-  (NoneValueAllowed /\b/)|(ParameterMultiplicity /\b/)|"None/\b/"|"description:"|"help:"|"usage:"|"parameters:"|
+  (EmptyStrAllowed /\b/)|(ParameterMultiplicity /\b/)|"None/\b/"|"description:"|"help:"|"usage:"|"parameters:"|
   "commands:"|"cli_command:"|"gui:"|"section/\b/"|"stack:"|"grid:"|(CommandType /\b/)|(ParameterType /\b/)
 ;
 
@@ -196,12 +196,7 @@ CliOptionalGroup:
 ;
 
 CliOrGroup:
-  (lhs=CliBasicEllement '|' rhs=CliOrGroup)|
-  (lhs=CliGroup '|' rhs=CliOrGroup)|
-  (lhs=CliGroup '|' rhs=CliGroup)|
-  (lhs=CliBasicEllement '|' rhs=CliGroup)|
-  (lhs=CliGroup '|' rhs=CliBasicEllement)|
-  (lhs=CliBasicEllement '|' rhs=CliBasicEllement)
+  (lhs=CliBasicEllement|lhs=CliGroup '|' rhs=CliOrGroup|rhs=CliGroup|rhs=CliBasicEllement)
 ;
 
 // GUI ----------
@@ -211,7 +206,7 @@ GuiStructure:
 ;
 
 GuiElement:
-  GuiTabs|GuiSectionGroup|GuiSection|GuiGrid|ParameterReference
+  GuiTabs|GuiSectionGroup|GuiSection|GuiGrid|GuiGridRow|ParameterReference
 ;
 
 GuiTabs:
@@ -245,7 +240,9 @@ GuiSection:
 
 GuiGrid:
   "grid:"
+  '{'
     elements+=GuiGridRow
+  '}'
 ;
 
 GuiGridRow:

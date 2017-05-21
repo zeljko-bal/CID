@@ -3,17 +3,24 @@ from inspect import getfullargspec
 from types import MethodType, BuiltinMethodType
 from contextlib import contextmanager
 from collections import namedtuple, defaultdict
+from operator import add
+from functools import reduce
 
 from common import *
 
+'''
 @total_ordering
 class ProcessorFunction:
 	def __init__(self, name, func, attrs=[], adds=[], dels=[], requires=[]):
-		self.type = type
+		if isinstance(type, list):
+			self.type = type
+		else:
+			self.type = [type]
 		self.name = name
-		self.attrs = attrs
-		self.adds = adds
-		self.dels = dels
+		add_attrs = lambda attr_list, type_list: reduce(add, [['{}.{}'.format(t, attr) for attr in attr_list] for t in type_list])
+		self.attrs = add_attrs(attrs, self.type)
+		self.adds = add_attrs(adds, self.type)
+		self.dels = add_attrs(dels, self.type)
 		self.requires = requires
 		
 	def __call__(self, *args, **kwargs):
@@ -48,18 +55,22 @@ class ProcessorInvoker:
 		for partition in partitioned_callbacks:
 			partitioned_by_type = defaultdict(list)
 			for callback in partition:
-				partitioned_by_type[callback.type].append(callback)
+				for type in callback.type:
+					partitioned_by_type[type].append(callback)
 			ModelProcessor(partitioned_by_type).process_model(model)
 			
+	def add_callback(self, func, type, name, attrs=[], adds=[], dels=[], requires=[]):
+		self.processor(type, name, attrs, adds, dels, requires)(func)
+	
 	def processor(self, type, name=None, attrs=[], adds=[], dels=[], requires=[]):
-		def processor_decorator(self, func):
+		def processor_decorator(func):
 			if not name:
 				name = func.__name__
 			wrapped_func = ProcessorFunction(name, func, attrs, adds, dels requires)
 			self.callbacks.append(wrapped_func)
 			return wrapped_func
 		return processor_decorator
-			
+'''		
 class ModelProcessor:
 	def __init__(self, callbacks, allow_revisiting=False):
 		if isinstance(callbacks, list):
@@ -177,6 +188,8 @@ class ModelProcessor:
 			elif element_type(gui_element) == 'GuiGrid':
 				for row in gui_element.elements:
 					self.process_gui_grid_row(row)
+			elif element_type(gui_element) == 'GuiGridRow':
+				self.process_gui_grid_row(gui_element)
 			elif element_type(gui_element) == 'Parameter':
 				self.process_parameter(gui_element)
 			elif element_type(gui_element) == 'ParameterReference':

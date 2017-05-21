@@ -5,9 +5,11 @@ PRIMITIVE_PYTHON_TYPES = [int, float, str, bool]
 
 class ModelPrinter:
 	def __init__(self, omitted_attributes=[], primitive_types=[int, float, str, bool], indent_str='    ', indent_separator='|', name_attr='name', parent_attr='parent', 
-						print_empty_attrs=False, print_empty_lists=False, print_list_index=False):
+						print_empty_attrs=False, print_empty_lists=False, print_list_index=False, print_parent_attr=False):
 		self.printed = []
-		self.omitted_attributes = [parent_attr, name_attr] + omitted_attributes
+		self.omitted_attributes = omitted_attributes + [name_attr]
+		if not print_parent_attr:
+			self.omitted_attributes.append(parent_attr)
 		self.primitive_types = primitive_types
 		self.indent_str = indent_str
 		self.indent_separator = indent_separator

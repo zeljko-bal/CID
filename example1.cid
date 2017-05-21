@@ -54,6 +54,7 @@ Cmd command1 "Command1":
 			cli: "--many-par {*}"
 			empty_str: Allowed
 			multiplicity: *
+			default: "True"
 			
 		Str separated_par:
 			cli: "--sep-par {*|,}"
@@ -62,16 +63,21 @@ Cmd command1 "Command1":
 		Str positional_many:
 			multiplicity: *
 	}
-	usage: 
+	usage:
 		- [/exo1] [/example2/external_option2] outer_option1 positional1 -- positional_many
 		- str_par1 outer_option1 {sub_command}
 		- [str_par_default_None date_par] file_par|choice_par (tuple_par tuple_par2 many_par)|separated_par
 	#gui:
-	#	grid: [/exo1                     |outer_option1  |str_par_default_None|file_par       ]
-	#		  [/example2/external_option2|   str_par1   |>>>>>>>>>>>>>>>>>>>>>|positional_many]
+	#	grid:
+	#	{
+	#		[/exo1                     |outer_option1  |str_par_default_None |file_par       ]
+	#		[/example2/external_option2|   str_par1    |>>>>>>>>>>>>>>>>>>>>>|positional_many]
+	#	}
 	commands:
 	{
 		Sub sub1 "Sub command 1":
+			description: "Sub Command 1, Sub Command 1, does whatever sub command 1 does."
+			help: "asdsdvr revbrtb thbtrgr sergsreg esrgsergr gsergserg erg"
 			parameters:
 			{
 				Bool inner_opt:
@@ -81,7 +87,7 @@ Cmd command1 "Command1":
 			parameters:
 			{
 				outer_option1
-			}
+			} 
 		Sub sub3:
 			description: "Description for command 3"
 			parameters:
@@ -93,3 +99,4 @@ Cmd command1 "Command1":
 			cli_command: "subcommand3"
 		Sub sub4
 	}
+	

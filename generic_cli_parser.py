@@ -14,11 +14,15 @@ ako ne pukne proverim dal ima viska nonpositional il positional, ako ima viska p
 
 multiplicity: number|'*'
 string..:
-	--nesto={}
 	--nesto {}
 	--nesto {n}
+	--nesto {n|separator} [x]
 	--nesto {*}
+	--nesto {*|separator} [x]
+	--nesto={}
+	--nesto={n|separator} [?]
 	--nesto={*|separator}
+	
 	--nesto {'x', 'y'}
 boolean:
 	--nesto|--not-nesto
@@ -331,6 +335,7 @@ class OrGroup:
 		self.elements = elements
 	
 	def process(self, ctx):
+		ctx = ctx.clone()
 		error_message = "Invalid arguments, errors encountered in mutually exclusive usage patterns:"
 		for element in self.elements:
 			try:
@@ -344,6 +349,7 @@ class OptionalElement:
 		self.element = element
 		
 	def process(self, ctx):
+		ctx = ctx.clone()
 		try:
 			return self.element.process(ctx)
 		except InvalidUsageException:
@@ -489,11 +495,15 @@ def is_iterable(data):
 def convert_data(data, model):
 	if is_iterable(data):
 		ret = [convert_data(element, model) for element in data]
-		if model.cli_pattern_vars and not is_iterable(ret[0]): # has cli_pattern_vars and values are not themselves lists
+		if ret[0] is None:
+			return None
+		if model.cli_pattern_vars and not is_iterable(ret[0]): # has cli_pattern_vars and values are not themselves lists and its not None value
 			ret = namedtuple(model.name, model.cli_pattern_vars)(*ret)
 		return ret
 	elif isinstance(data, str):
-		if model.type == "Num":
+		if model.type in ["Str", "File", "Choice"]:
+			return data
+		elif model.type == "Num":
 			try:
 				return int(data)
 			except ValueError:

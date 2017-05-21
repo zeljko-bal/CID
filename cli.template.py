@@ -14,7 +14,7 @@ ParameterGroup([
 	{%- endfor %}
 ])
 {%- elif element|element_type == 'CliOptionalGroup' -%}
-	{%- if element.elements|length > 1 %}
+	{%- if element.elements|length > 1 -%}
 OptionalElement(ParameterGroup([
 		{%- for el in element.elements %}
 {{ cli_element(el)|tab_indent }},
@@ -34,11 +34,6 @@ parameters['{{element.id}}'].usage_model
 	{%- for element in usage.elements %}
 {{ cli_element(element)|tab_indent }},
 	{%- endfor %}
-	{%- if usage.has_options %}
-		{%- for element in TODO %}
-	OptionalElement({{TODO}}), # TODO
-		{%- endfor %}
-	{%- endif %}
 	{%- if usage.has_subcommand %}
 	SubCommand(),
 	{%- endif %}
@@ -48,7 +43,7 @@ parameters['{{element.id}}'].usage_model
 {%- macro usages_model(usages) %}
 {%- if usages|length > 1 %}OrGroup([
 	{%- for usage in usages %}
-		{{-'\n'}}{{- usage_model(usage)|tab_indent }},
+{{ usage_model(usage)|tab_indent }},
 	{%- endfor %}
 ])
 {%- else %}

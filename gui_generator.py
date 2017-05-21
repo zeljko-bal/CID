@@ -1,5 +1,7 @@
 
-import os
+from os.path import join, split
+from os import makedirs
+from shutil import copy, rmtree
 from collections import defaultdict, namedtuple
 from jinja2 import Environment, FileSystemLoader
 
@@ -27,12 +29,24 @@ class GuiSection:
 		self.expanded = expanded
 		self.optional = optional
 		
+class GuiGrid:
+	def __init__(self, parent, elements):
+		self.parent = parent
+		self.elements = elements
+		
 GuiRowDimensions = namedtuple('GuiRowDimensions', ['colspan', 'width'])
 
 def html_id(id):
 	return id.replace('/', '_')
 
 # ------------------------------- GUI MODEL PROCESSORS -------------------------------
+
+def convert_row_to_grid(row):
+	if not element_type(row.parent) == 'GuiGrid':
+		idx = row.parent.elements.index(row)
+		grid = GuiGrid(row.parent, [row])
+		row.parent.elements[idx] = grid
+		row.parent = grid
 
 def check_parameter_widget(parameter):
 	if parameter.widget:
@@ -121,6 +135,14 @@ def add_gui_grid_row_dimensions(grid_row):
 			grid_row.dimensions.append(GuiRowDimensions(colspan, width))
 		else:
 			grid_row.dimensions.append(None)
+		
+# -------------------------------
+
+def parameter_description_defaults(parameter):
+	parameter.description = parameter.description.format(default_desc="""
+	# param count [v] # za File: You can also use the multiple attribute to allow multiple file uploads. 
+	# ako je neki popunjen i u subelements je od optional ili or, ostali koji nisu popunjeni su obavezni []
+	""")
 
 # -------------------------------
 
@@ -161,25 +183,43 @@ def check_gui_section_group(section_group):
 	if any([section.optional for section in section_group.elements]):
 		raise Exception("Optional section in section group.")
 
-# ------------------------------- DATA EXTRACTORS -------------------------------
-
 # ------------------------------- JINJA FILTERS -------------------------------
 
 class UniqueIdGenerator:
 	def __init__(self):
 		self.id_counts = defaultdict(int)
 	
-	def make_new(self, id, id_format='{id}:{count}'):
+	def make_new(self, id, id_format='{id}_{count}'):
 		self.id_counts[id] += 1
 		return self.get_current(id, id_format)
 		
-	def get_current(self, id, id_format='{id}:{count}'):
+	def get_current(self, id, id_format='{id}_{count}'):
 		return id_format.format(id=id, count=self.id_counts[id])
+		
+def get_gui_id(element, parent, base_id):
+	idx = parent.elements.index(element)
+	id = '{idx}_{base}'.format(idx=idx, base=base_id)
+	current = parent
+	
+	while element_type(current.parent) != 'Command':
+		if hasattr(current.parent, 'elements'):
+			idx = current.parent.elements.index(current)
+			id = '{idx}_{prev}'.format(idx=idx, prev=id)
+		current = current.parent
+	return '{cmd_id}_{prev}'.format(cmd_id=html_id(current.parent.id), prev=id)
+	
+def js_bool_filter(val):
+	if val:
+		return 'true'
+	else:
+		return 'false'
 
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
 def process_model(model):
-	ModelProcessor([{'GuiSectionGroup':gui_section_group_defaults, 'Command':gui_structure_defaults, 'GuiGridRow':add_gui_grid_row_dimensions}, _convert_id_visitor]).process_model(model)
+	ModelProcessor({'GuiGridRow':convert_row_to_grid});
+	ModelProcessor([{'GuiSectionGroup':gui_section_group_defaults, 'Command':gui_structure_defaults, 'GuiGridRow':add_gui_grid_row_dimensions, 'Parameter':parameter_description_defaults}, 
+		_convert_id_visitor]).process_model(model)
 	ModelProcessor({'Parameter':check_parameter_widget, 'GuiGrid':check_gui_grid, 'GuiSectionGroup':check_gui_section_group}).process_model(model)
 	
 	'''print_model(model, print_empty_attrs=False, print_empty_lists=True, omitted_attributes=[ 
@@ -205,33 +245,47 @@ def render_gui_code(model, root_command_name, dest_path):
 	env.filters['new_unique_id'] = unique_id_generator.make_new
 	env.filters['current_unique_id'] = unique_id_generator.get_current
 	env.filters['tab_indent'] = tab_indent_filter
-	'''env.filters['stringify'] = stringify_filter
-	env.filters['have_sub_commands'] = have_sub_commands_filter'''
+	env.filters['stringify'] = stringify_filter
+	env.filters['gui_id'] = get_gui_id
+	env.filters['js_bool'] = js_bool_filter
+	
+	'''env.filters['have_sub_commands'] = have_sub_commands_filter'''
 	
 	#env.globals['raise'] = raise_exception_helper
 	
 	
 	template = env.get_template('gui.template.html')
 	
-	rendered = template.render(root_command_name=root_command_name, root_command_id=html_id(element_id(root_command_name)), commands=all_commands)
+	rendered = template.render(root_command_name=root_command_name, root_command_id=html_id(element_id(root_command_name)), commands=all_commands, parameters=all_parameters)
 
-	with open(os.path.join(dest_path, "index.html"), "w") as text_file:
+	with open(join(dest_path, "index.html"), "w") as text_file:
 		text_file.write(rendered)
 
+def copy_framework(dest_path):
+	js_dir = join(dest_path, 'cid', 'js')
+	css_dir = join(dest_path, 'cid', 'css')
+	rmtree(js_dir)
+	rmtree(css_dir)
+	makedirs(js_dir)
+	makedirs(css_dir)
+	copy('framework.js', js_dir)
+	copy('model.js', js_dir)
+	copy('framework.css', css_dir)
+	
 def generate_gui(cid_file, root_command_name, dest_path):
 	model = parse(cid_file)
 	process_model(model)
 	render_gui_code(model, root_command_name, dest_path)
-	import winsound; winsound.PlaySound('turret_collide_2.wav', winsound.SND_FILENAME)
+	copy_framework(dest_path)
 	
 # ------------------------------- MAIN -------------------------------
 	
 if __name__ == '__main__':
 	generate_gui('./example1.cid', 'command1', '../../material_html_template/generated-electron-quick-start/') # TODO src path as arg, # TODO root_command_name and dest path as args
-
+	import winsound; winsound.PlaySound('completed.wav', winsound.SND_FILENAME)
 	
 	
-!!!!!!!!!!!!! 
+'''
 - nema vise none_allowed [v]
 - ima empty_str = allowed/disalowed samo za string, po defaultu je True ako je default='' [v]
 - defaults: [v]
@@ -246,18 +300,19 @@ if not parameter.default:
 	if parameter.type == 'Bool': 
 		parameter.default = 'False' sem ako postoji pos i neg pattern, onda je none
 )
-- switch ima samo za string ako je empty_str_allowed (i za multiple i count many str), kad je iskljucen i klikne se na polje automatski se ukljuci, ostali imaju fazon za none []
-- u many ako su sva polja prazna onda je ceo param none []
-
+- switch ima samo za string ako je empty_str_allowed (i za multiple i count many str) [v]
+- kad je iskljucen switch i klikne se na polje automatski se ukljuci, ostali imaju fazon za none [v]
+- u many ako su sva polja prazna onda je ceo param none [v]
+'''
 
 
 # sub commands [v]
 # default = none [v]
 # param count [v] # za File: You can also use the multiple attribute to allow multiple file uploads. 
 # multi param [v]
-# param description prikaz []
-# param help prikaz []
-# command help prikaz []
+# param description prikaz [v]
+# param help prikaz [v]
+# command help prikaz [v]
 # default data json i ucitavanje []
 # detektovanje koji je popunjen, update vrednosti u model, ignorisuci collapsed sections []
 # na detekciju promene modela:

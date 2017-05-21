@@ -32,7 +32,13 @@ def element_id(element_name, parents=[]):
 	return '/'+'/'.join(parents+[element_name])
 	
 def tab_indent_filter(text, level=1, start_from=1):
-	return '\n'.join([(level*'\t')+line if idx+1 >= start_from else line for idx, line in enumerate(text.split('\n'))])
+	return '\n'.join([(level*'\t')+line if idx+1 >= start_from and line != '' else line for idx, line in enumerate(text.split('\n'))])
+	
+def stringify_filter(value):
+	if isinstance(value, str):
+		return "'{}'".format(value)
+	else:
+		return value
 	
 def raise_exception_helper(msg):
 	raise Exception(msg)
