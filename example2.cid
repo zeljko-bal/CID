@@ -1,4 +1,6 @@
 
+Sub external_option1 "Testt"
+
 Bool external_option1 "ex option1":
 	description: "I,m externallllll"
 	cli: "--exo1"
@@ -6,3 +8,5 @@ Bool external_option1 "ex option1":
 Bool external_option2 "ex option2":
 	description: "I,m externallllll2"
 	cli: "--exo2"
+
+

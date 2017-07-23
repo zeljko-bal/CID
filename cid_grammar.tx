@@ -20,16 +20,18 @@ ScriptElement:
 
 Command:
   type=CommandType name=ID (title=STRING)? (':'
-   (('description:' description=STRING)|
-    ('help:' help=STRING)|
-    ('parameters:' '{' parameters+=CommandParameter '}')|
-    ('commands:' '{' sub_commands+=SubCommand '}')|
-    ('constraints:' constraints=CodeBlock)|
-    ('cli_command:' cli_command=STRING)|
-	('help_params:' help_params+=STRING[',']|no_help?='None')|
-	('long_help_params:' long_help_params+=STRING[',']|no_long_help?='None')|
-    ('usage:' (usages+=CliStructureMultiLine)|(usage=CliStructure))|
-    ('gui:' gui=GuiStructure))+
+    (
+      ('description:' description=STRING)?
+      ('help:' help=STRING)?
+      ('parameters:' '{' parameters+=CommandParameter '}')?
+      ('commands:' '{' sub_commands+=SubCommand '}')?
+      ('constraints:' constraints=CodeBlock)?
+      ('cli_command:' cli_command=STRING)?
+	  ('help_params:' help_params+=STRING[',']|no_help?='None')?
+	  ('long_help_params:' long_help_params+=STRING[',']|no_long_help?='None')?
+      ('usage:' (usages+=CliStructureMultiLine)|(usage=CliStructure))?
+      ('gui:' gui=GuiStructure)?
+    )#
   )?
 ;
 
@@ -49,16 +51,18 @@ SubCommand:
 
 Parameter:
   type=ParameterType name=ID (title=STRING)? (':'
-   (('description:' description=STRING)|
-    ('help:' help=STRING)|
-    ('default:' default+=STRING[',']|default_is_none?='None')|
-    ('empty_str:' empty_str_allowed?='Allowed'|empty_str_disallowed?='Disallowed')|
-    ('multiplicity:' multiplicity=ParameterMultiplicity)|
-    ('widget:' widget=GuiWidget)|
-    ('choices:' choices+=ChoiceParameterValue[','])|
-    ('date_format:' date_format=STRING)|
-    ('cli:' cli=ParameterCliValue (',' cli_aliases+=ParameterCliPattern[','])?)|
-    ('constraints:' constraints+=ParameterConstraint))+
+    (
+      ('description:' description=STRING)?
+      ('help:' help=STRING)?
+      ('default:' (default+=STRING[',']|default_is_none?='None'))?
+      ('empty_str:' (empty_str_allowed?='Allowed'|empty_str_disallowed?='Disallowed'))?
+      ('multiplicity:' multiplicity=ParameterMultiplicity)?
+      ('widget:' widget=GuiWidget)?
+      ('choices:' choices+=ChoiceParameterValue[','])?
+      ('date_format:' date_format=STRING)?
+      ('cli:' cli=ParameterCliValue (',' cli_aliases+=ParameterCliPattern[','])?)?
+      ('constraints:' constraints+=ParameterConstraint)?
+    )#
   )?
 ;
 
@@ -124,46 +128,81 @@ CommandReference:
   !KeyWord (local=ID)|(imported=ImportReference)
 ;
 
-// TODO automatic keywords u metamodel
 KeyWord:
-  (EmptyStrAllowed /\b/)|(ParameterMultiplicity /\b/)|"None/\b/"|"description:"|"help:"|"usage:"|"parameters:"|
-  "commands:"|"cli_command:"|"gui:"|"section/\b/"|"stack:"|"grid:"|(CommandType /\b/)|(ParameterType /\b/)
+  EmptyStrAllowed|ParameterMultiplicity|"None"|"description:"|"help:"|"usage:"|"parameters:"|
+  "commands:"|"cli_command:"|"gui:"|"section"|"stack:"|"grid:"|CommandType|ParameterType
 ;
 
 CodeBlock:
   "<<"
-    code=/(?s)((?!>>).)*/ // matches everything until >> is encountered
+    code=/(?s)((?!>>).)*/    // matches everything until >> is encountered
   ">>"
 ;
 
 // CONSTRAINTS ----------
 
-ParameterConstraint: // TODO posebni tipovi ogranicenja sa posebnom sintaksom
-  type=ConstraintType ':'
-    (value=ConstraintValue)?
+ParameterConstraint:
+  NumericValueConstraint|
+  DateConstraint|
+  LengthConstraint|
+  StringFlagConstraint|
+  NumberFlagConstraint|
+  FileFlagConstraint|
+  RegexConstraint|
+  CodeConstraint
+;
+
+NumericValueConstraint:
+  (type='max'|type='min') ':'
+    value=FLOAT
     (message=STRING)?
 ;
 
-ConstraintValue:
-  RegexConstraintValue|FLOAT|DateConstraintValue|DurationConstraintValue|CodeBlock
+DateConstraint:
+  (type='max'|type='min') ':'
+    value=STRING
+    (message=STRING)?
+;
+
+LengthConstraint:
+  (type='min_length'|type='max_length') ':'
+    value=INT
+    (message=STRING)?
+;
+
+StringFlagConstraint:
+  type='alphanumeric' (':'
+    message=STRING
+  )?
+;
+
+NumberFlagConstraint:
+  type='integer' (':'
+    message=STRING
+  )?
+;
+
+FileFlagConstraint:
+  (type='exists'|type='doesnt_exist'|type='is_file'|type='is_directory') (':'
+    message=STRING
+  )?
+;
+
+RegexConstraint:
+  'regex' ':'
+    value=RegexConstraintValue
+    (message=STRING)?
 ;
 
 RegexConstraintValue:
   /\/.*\//
 ;
 
-DateConstraintValue:
-  /not implemented/ // TODO
+CodeConstraint:
+  'custom' ':'
+    value=CodeBlock
+    (message=STRING)?
 ;
-
-DurationConstraintValue:
-  /not implemented/ // TODO
-;
-
-ConstraintType:
-  'max'|'min'|'min_length'|'max_length'|'regex'|'alphanumeric'|'integer'|
-  'from_now'|'before_now'|'exists'|'doesnt_exist'|'is_file'|'is_directory'
-; // TODO from_now i before_now lepse i da moze vise ili manje
 
 // CLI ----------
 
@@ -196,7 +235,7 @@ CliOptionalGroup:
 ;
 
 CliOrGroup:
-  (lhs=CliBasicEllement|lhs=CliGroup '|' rhs=CliOrGroup|rhs=CliGroup|rhs=CliBasicEllement)
+  ((lhs=CliBasicEllement|lhs=CliGroup) '|' (rhs=CliOrGroup|rhs=CliGroup|rhs=CliBasicEllement))
 ;
 
 // GUI ----------
@@ -231,8 +270,8 @@ GuiSectionGroup:
 
 GuiSection:
   'section' (title=STRING)? ':'
-  ((expanded?='expanded')|
-   (optional?='optional'))*
+  ((expanded?='expanded')?
+   (optional?='optional')?)#
   '{'
     body=GuiStructure
   '}'

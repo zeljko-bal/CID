@@ -59,14 +59,38 @@ PositionalParameter('{{parameter.name}}'{% if parameter.multiplicity != 1 %}, mu
 {%- endif %}
 {%- endmacro -%}
 
+{%- macro constraint_model(constraint) %}
+{%- if constraint|element_type == "NumericValueConstraint" -%}
+NumericValueConstraintValidator('{{constraint.type}}', {{constraint.value}}, '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'DateConstraint' -%}
+DateConstraintValidator('{{constraint.type}}',  datetime.strptime('{{constraint.value}}', '%d.%m.%Y'), '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'LengthConstraint' -%}
+LengthConstraintValidator('{{constraint.type}}', {{constraint.value}}, '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'StringFlagConstraint' -%}
+StringFlagConstraintValidator('{{constraint.type}}', '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'NumberFlagConstraint' -%}
+NumberFlagConstraintValidator('{{constraint.type}}', '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'FileFlagConstraint' -%}
+FileFlagConstraintValidator('{{constraint.type}}', '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'RegexConstraint' -%}
+RegexConstraintValidator('{{constraint.value}}', '''{{constraint.message}}''')
+{%- elif constraint|element_type == 'CodeConstraint' -%}
+CodeConstraintValidator('''{{constraint.value.code}}''', '''{{constraint.message}}''')
+{%- endif %}
+{%- endmacro -%}
+
 {# ----------------- CODE START ----------------- #}
 '''
 Automatically generated code. Do not edit directly.
 '''
 
+from datetime import datetime
 from generic_cli_parser import CommandParserModel, ParameterModel, BasicNonpositional, MultiArgNonpositional, SeparatedNonpositional, \
 	CounterNonpositional,	BooleanNonpositional, ParameterGroup, OrGroup, OptionalElement, NonPositionalParameter, \
-	PositionalParameter, ParameterSeparator, SubCommand, parse_cli_args as _parse_cli_args, invoke_commands as _invoke_commands, print_builtin_help as _print_builtin_help
+	PositionalParameter, ParameterSeparator, SubCommand, \
+	NumericValueConstraintValidator, DateConstraintValidator, LengthConstraintValidator, StringFlagConstraintValidator, \
+	NumberFlagConstraintValidator, FileFlagConstraintValidator, RegexConstraintValidator, CodeConstraintValidator, \
+	parse_cli_args as _parse_cli_args, invoke_commands as _invoke_commands, print_builtin_help as _print_builtin_help
 	
 root_command_name = '{{root_command_name}}'
 root_command_id = '{{root_command_id}}'
@@ -88,6 +112,13 @@ parameters = {
 		{%- endif %}
 		{%- if parameter.cli_pattern_vars %}
 		cli_pattern_vars={{parameter.cli_pattern_vars}},
+		{%- endif %}
+		{%- if parameter.constraints %}
+		constraints=[
+			{%- for constraint in parameter.constraints %}
+			{{constraint_model(constraint)}},
+			{%- endfor %}
+		],
 		{%- endif %}
 	),
 {%- endfor %}
@@ -155,8 +186,10 @@ class command:
 		self.parent = parent
 		
 	def __call__(self, func):
-		if not hasattr(func, 'sub_commands'):
-			func.sub_commands = {}
+		global _annotated_callbacks
+	
+		self.define_sub_commands(func)
+			
 		if not self.name:
 			self.name = func.__name__
 			
@@ -166,32 +199,45 @@ class command:
 			else:
 				_annotated_callbacks = func, func.sub_commands
 		else:
+			self.define_sub_commands(self.parent)
 			self.parent.sub_commands[self.name] = func, func.sub_commands
 			
 		return func
+		
+	@staticmethod
+	def define_sub_commands(func):
+		if not hasattr(func, 'sub_commands'):
+			func.sub_commands = {}
 
 def parse_cli_args(args=None):
 	if args is None:
 		args = get_cli_args()
+	
 	return _parse_cli_args(root_command_id, commands, args)
 	
 def invoke_commands(command_callbacks=None, args=None):
+	global _annotated_callbacks
+	
 	if args is None:
 		args = get_cli_args()
+	
 	if not command_callbacks:
 		if not _annotated_callbacks:
 			raise Exception("No callbacks provided.")
 		command_callbacks = _annotated_callbacks
+	
 	_invoke_commands(command_callbacks, root_command_id, commands, args)
 
 def print_builtin_help(args=None):
 	if args is None:
 		args = get_cli_args()
+	
 	_print_builtin_help(root_command_id, commands, args)
 
 if __name__ == '__main__':
 	def get_print_callbacks(command):
 		callback = lambda args: print('{}:'.format(command.name), '\n   ', args, '\n')
+		
 		if command.sub_commands:
 			return callback, {c.name:get_print_callbacks(c) for c in command.sub_commands}
 		else:

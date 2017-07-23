@@ -16,6 +16,14 @@ Cmd command1 "Command1":
 		
 		Num counter_par:
 			cli: "-{count:v}"
+            constraints:
+				min: 4 "minimum is 4"
+				max: 8 
+				integer
+				custom:
+				<<
+					var i = 6;
+				>>
 			
 		Num num_par1:
 			cli: "--num_par1={}"
@@ -44,6 +52,9 @@ Cmd command1 "Command1":
 		
 		Num tuple_par:
 			cli: "--tuple-par {'x', 'y'}", "-tp {2}"
+			constraints:
+				min: 4 "minimum is 4, actual values are {value.x} and {value.y}"
+				max: 8 
 			
 		Str tuple_par2:
 			cli: "--tuple-par2 {'xx', 'yy'}", "-tp2 {2}"
@@ -66,7 +77,7 @@ Cmd command1 "Command1":
 	usage:
 		- [/exo1] [/example2/external_option2] outer_option1 positional1 -- positional_many
 		- str_par1 outer_option1 {sub_command}
-		- [str_par_default_None date_par] file_par|choice_par (tuple_par tuple_par2 many_par)|separated_par
+		- [str_par_default_None date_par] counter_par file_par|choice_par (tuple_par tuple_par2 many_par)|separated_par
 	#gui:
 	#	grid:
 	#	{
@@ -75,7 +86,7 @@ Cmd command1 "Command1":
 	#	}
 	commands:
 	{
-		Sub sub1 "Sub command 1":
+		Cmd sub1 "Sub command 1":
 			description: "Sub Command 1, Sub Command 1, does whatever sub command 1 does."
 			help: "asdsdvr revbrtb thbtrgr sergsreg esrgsergr gsergserg erg"
 			parameters:
@@ -83,12 +94,12 @@ Cmd command1 "Command1":
 				Bool inner_opt:
 					cli: "--inner-opt"
 			}
-		Sub sub2:
+		Cmd sub2:
 			parameters:
 			{
 				outer_option1
 			} 
-		Sub sub3:
+		Cmd sub3:
 			description: "Description for command 3"
 			parameters:
 			{
@@ -97,6 +108,6 @@ Cmd command1 "Command1":
 					cli: "--help"
 			}
 			cli_command: "subcommand3"
-		Sub sub4
+		Cmd sub4
 	}
 	

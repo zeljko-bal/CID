@@ -1,0 +1,165 @@
+.parameter-wrapper[data-param-type=Date] .input-field input,
+.parameter-wrapper[data-param-type=Date] .input-field label,
+{
+	cursor: pointer;
+}
+
+i
+{
+	-webkit-user-select: none;
+}
+
+.select-wrapper .dropdown-content li:first-child
+{
+	border-bottom-style: dashed;
+	border-bottom-width: 1px;
+	border-color: #cccccc;
+}
+
+nav
+{
+	background-color: #bdbdbd;
+	line-height: 36px;
+	height: 36px;
+	padding-left: 15px;
+	margin-bottom: 35px;
+}
+
+tr.has-textarea td
+{
+	vertical-align: top;
+}
+.collapsible-body, .tab-body
+{
+	//padding-top: 25px;
+}
+.switch label .lever
+{
+	margin: 0px;
+}
+
+input[type=number]::-webkit-inner-spin-button
+{ 
+	height:40px;
+}
+
+.number-input-wrapper
+{
+	max-width:15em;
+}
+
+.sub-command-wrapper
+{
+	white-space: nowrap;
+	margin-top: 5px;
+	vertical-align: top;
+}
+.sub-command-wrapper button
+{
+	padding-left:15px;
+	padding-right:10px;
+}
+.sub-command-wrapper button span
+{
+	vertical-align: top;
+	margin-right:5px;
+}
+.sub-command-wrapper button i
+{
+	font-size: 1.5rem;
+}
+
+div.switch.none-switch
+{
+	width:1px;
+	transform: rotate(-90deg) scale(0.85, 0.85);
+	position:relative;
+	right:5px;
+	top:45px;
+}
+div.switch.none-switch input
+{
+	display:none;
+}
+
+.command-panel td
+{
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+div.material-tooltip 
+{
+	max-width: 60%;
+	text-align: left;
+}
+
+.close-desc-button i
+{
+	color:white;
+}
+
+.more-options-btn
+{
+	flex-grow: 0;
+}
+
+.parameter-wrapper .more-options-btn .dropdown-button
+{
+	opacity: 0.2;
+	transition: opacity 0.5s;
+	color: #009688;
+}
+.parameter-wrapper:hover .more-options-btn .dropdown-button
+{
+	opacity: 1;
+	transition: opacity 0.1s;
+}
+
+.add-input-collection-item-btn,
+.add-input-field-btn
+{
+	opacity: 0.4;
+	color: teal;
+	transition: color 0.5s, opacity 0.5s;
+}
+.add-input-collection-item-btn:hover,
+.add-input-field-btn:hover
+{
+	opacity: 1;
+	color: #00a238;
+	transition: color 0.1s, opacity 0.1s;
+}
+
+.remove-input-field-btn,
+.remove-input-collection-item-btn
+{
+	opacity: 0.4;
+	color: teal;
+	transition: color 0.5s, opacity 0.5s;
+}
+.remove-input-field-btn:hover,
+.remove-input-collection-item-btn:hover
+{
+	color: #FE4B4B;
+	opacity: 1;
+	transition: color 0.1s, opacity 0.1s;
+}
+
+.input-list,
+.input-collection
+{
+	display: flex;
+	flex-direction: column;
+}
+
+.parameter-wrapper > .input-list,
+.parameter-wrapper > .input-collection
+{
+	flex-grow: 1;
+}
+.parameter-wrapper[data-param-type=Num] > .input-list,
+.parameter-wrapper[data-param-type=Num] > .input-collection
+{
+	flex-grow: 0;
+}
