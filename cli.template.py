@@ -89,7 +89,7 @@ from generic_cli_parser import CommandParserModel, ParameterModel, BasicNonposit
 	CounterNonpositional,	BooleanNonpositional, ParameterGroup, OrGroup, OptionalElement, NonPositionalParameter, \
 	PositionalParameter, ParameterSeparator, SubCommand, \
 	NumericValueConstraintValidator, DateConstraintValidator, LengthConstraintValidator, StringFlagConstraintValidator, \
-	NumberFlagConstraintValidator, FileFlagConstraintValidator, RegexConstraintValidator, CodeConstraintValidator, \
+	NumberFlagConstraintValidator, FileFlagConstraintValidator, RegexConstraintValidator, CodeConstraintValidator, CommandCodeConstraintValidator, \
 	parse_cli_args as _parse_cli_args, invoke_commands as _invoke_commands, print_builtin_help as _print_builtin_help
 	
 root_command_name = '{{root_command_name}}'
@@ -148,6 +148,9 @@ commands = {
 		{%- endif %}
 		{%- if command.long_help_params %}
 		builtin_long_help_params={{command.long_help_params}},
+		{%- endif %}
+		{%- if command.constraints %}
+		constraint_validator=CommandCodeConstraintValidator('''{{command.constraints.code_block.code}}''', '''{{command.constraints.message}}'''),
 		{%- endif %}
 	),
 {%- endfor %}

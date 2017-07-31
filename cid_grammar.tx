@@ -25,7 +25,7 @@ Command:
       ('help:' help=STRING)?
       ('parameters:' '{' parameters+=CommandParameter '}')?
       ('commands:' '{' sub_commands+=SubCommand '}')?
-      ('constraints:' constraints=CodeBlock)?
+      ('constraints:' constraints=CommandConstraint)?
       ('cli_command:' cli_command=STRING)?
 	  ('help_params:' help_params+=STRING[',']|no_help?='None')?
 	  ('long_help_params:' long_help_params+=STRING[',']|no_long_help?='None')?
@@ -45,6 +45,10 @@ CommandParameter:
 
 SubCommand:
   CommandReference|Command
+;
+
+CommandConstraint:
+  code_block=CodeBlock message=STRING
 ;
 
 // PARAMETER ----------
@@ -83,11 +87,11 @@ GuiWidget:
 ;
 
 ChoiceParameterValue:
-  STRING|CodeBlock
+  STRING
 ;
 
 ParameterCliValue:
-  (cli_pattern=ParameterCliPattern)|(code_block=CodeBlock)
+  cli_pattern=ParameterCliPattern
 ;
 
 ParameterCliPattern:
@@ -130,7 +134,7 @@ CommandReference:
 
 KeyWord:
   EmptyStrAllowed|ParameterMultiplicity|"None"|"description:"|"help:"|"usage:"|"parameters:"|
-  "commands:"|"cli_command:"|"gui:"|"section"|"stack:"|"grid:"|CommandType|ParameterType
+  "commands:"|"constraints:"|"cli_command:"|"gui:"|"section"|"stack:"|"grid:"|CommandType|ParameterType
 ;
 
 CodeBlock:
@@ -201,7 +205,7 @@ RegexConstraintValue:
 CodeConstraint:
   'custom' ':'
     value=CodeBlock
-    (message=STRING)?
+    message=STRING
 ;
 
 // CLI ----------
@@ -219,7 +223,7 @@ CliElement:
 ;
 
 CliBasicEllement:
-  CodeBlock|CliOptionalGroup|CliSeparator|ParameterReference
+  CliOptionalGroup|CliSeparator|ParameterReference
 ;
 
 CliSeparator:

@@ -6,8 +6,8 @@ Bool outer_option1:
 	cli: "--outer-option1", "-oo1|-noo1"
 
 Cmd command1 "Command1":
-	help: "help"
 	description: "Command 1, Command 1, does whatever command 1 does."
+	help: "help"
 	parameters:
 	{
 		/exo1
@@ -21,9 +21,10 @@ Cmd command1 "Command1":
 				max: 8 
 				integer
 				custom:
-				<<
-					var i = 6;
-				>>
+					<<
+						return (value % 2) === 0;
+					>>
+					"value must be even number"
 			
 		Num num_par1:
 			cli: "--num_par1={}"
@@ -74,6 +75,14 @@ Cmd command1 "Command1":
 		Str positional_many:
 			multiplicity: *
 	}
+	constraints:
+		<<
+			console.log('Command1 constraint got sub_command: ' + sub_command);
+			console.log('Command1 constraint got args:');
+			console.log(args);
+            return true;
+		>>
+		"command constraint message"
 	usage:
 		- [/exo1] [/example2/external_option2] outer_option1 positional1 -- positional_many
 		- str_par1 outer_option1 {sub_command}

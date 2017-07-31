@@ -6,11 +6,12 @@ from functools import reduce
 from operator import add
 from inspect import getfullargspec
 from types import MethodType, BuiltinMethodType
+from js2py import eval_js
 
 
 class CommandParserModel:
     def __init__(self, id, name, cli_command, parameter_models=[], usage_model=None, usage_help='', long_usage_help='', sub_commands=[],
-                 separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a']):
+                 separators=['--'], builtin_help_params=['--help', '-h'], builtin_long_help_params=['--all', '-a'], constraint_validator=None):
         self.id = id
         self.name = name
         self.cli_command = cli_command
@@ -24,6 +25,10 @@ class CommandParserModel:
         self.long_usage_help = long_usage_help
         self.builtin_help_params = builtin_help_params
         self.builtin_long_help_params = builtin_long_help_params
+        if constraint_validator:
+            self.constraint_validator = constraint_validator
+        else:
+            self.constraint_validator = NoneConstraintValidator()
 
 
 class ParameterModel:
@@ -507,22 +512,38 @@ class FileFlagConstraintValidator:
 
 
 class RegexConstraintValidator:
-    def __init__(self, value, message):
-        self.value = value
+    def __init__(self, pattern, message):
+        self.pattern = pattern
         self.message = message
 
     def is_valid(self, input_value):
-        return re.fullmatch(self.value, input_value)
+        return re.fullmatch(self.pattern, input_value)
 
 
 class CodeConstraintValidator:
-    def __init__(self, value, message):
-        self.value = value
+    def __init__(self, code, message):
+        self.code = code
         self.message = message
 
     def is_valid(self, input_value):
-        return True  # TODO
+        validator = eval_js("function (value) {{ {code} }}".format(code=self.code))
+        return validator(input_value)
 
+
+class CommandCodeConstraintValidator:
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+
+    def is_valid(self, args, sub_command):
+        validator = eval_js("function (args, sub_command) {{ {code} }}".format(code=self.code))
+        return validator(args, sub_command)
+
+
+class NoneConstraintValidator:
+    def __init__(self):
+        self.message = ''
+        self.is_valid = lambda *_: True
 
 # --------------------- CLI ARGS PARSER ---------------------
 
@@ -567,7 +588,10 @@ def parse_cli_args(root_command_id, command_models, args):
             parameter_model = command_model.parameter_models[arg.name]
             for constraint in parameter_model.constraints:
                 if not is_constraint_satisfied(arg.value, constraint):
-                    raise Exception('{name}: "{message}"'.format(name=arg.name, message=constraint.message.format(value=arg.value)))
+                    raise InvalidArguments('{name}: "{message}"'.format(name=arg.name, message=constraint.message.format(value=arg.value)))
+
+        if not command_model.constraint_validator.is_valid({arg.name: arg.value for arg in all_matched_args}, command.sub_command_id):
+            raise InvalidArguments('{name}: "{message}"'.format(name=command_model.name, message='command constraints not satisfied'.format(value=arg.value)))
 
         matched_args[command_model.id] = CommandArgs(all_matched_args, command.sub_command_id)
 
