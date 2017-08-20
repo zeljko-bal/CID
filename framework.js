@@ -4,7 +4,8 @@
 $('.datepicker').pickadate(
 {
 	selectMonths: true, // Creates a dropdown to control month
-	selectYears: 15 // Creates a dropdown of 15 years to control year
+	selectYears: 15, // Creates a dropdown of 15 years to control year
+	closeOnSelect: true, // Close upon selecting a date,
 });
 
 $('select').material_select();
@@ -96,6 +97,8 @@ $('.collapsible-header.exclusive-section').click(event =>
 	{
 		current_section.children('i.section-check-icon').text('check_circle');
 	}
+	
+	window.setTimeout(digest, 1);
 });
 
 $('.collapsible-header.optional-section').click(event =>
@@ -111,6 +114,8 @@ $('.collapsible-header.optional-section').click(event =>
 		current_section.children('i.section-check-icon').text('check_circle');
 		current_section.children('i.section-expand-icon').text('expand_less');
 	}
+	
+	window.setTimeout(digest, 1);
 });
 
 // ------------------- COMMAND PANELS -------------------
@@ -147,9 +152,11 @@ function toggle_command_panel(event)
 			current_commands.pop();
 		}
 	}
+	
+	digest();
 }
 
-$('.sub-command-button').click('next', toggle_command_panel);
+$('.sub-command-link').click('next', toggle_command_panel);
 $('.parent-command-link').click('prev', toggle_command_panel);
 
 // display sub-command in cli panel
@@ -159,6 +166,11 @@ $('.sub-command-wrapper .btn').hover(event =>
 	let cli_command = command_models[command_id].cli_command;
 	$('#sub-command-cli-text').text(cli_command);
 },() =>
+{
+	$('#sub-command-cli-text').text('');
+});
+
+$('.sub-command-wrapper .btn').click(event => 
 {
 	$('#sub-command-cli-text').text('');
 });
@@ -297,6 +309,8 @@ function reinitialize_input_item(param, new_input_li)
 			break;
 		}
 	}
+	
+	new_input_li.find('input, select').change(digest);
 }
 
 // ------------------- INPUT FIELD -------------------
@@ -315,6 +329,8 @@ function add_input_field(event)
 	
 	reinitialize_input_item(param, new_li);
 	reinitialize_input_list(param, input_list);
+	
+	digest();
 }
 
 $('.add-input-field-btn').click(add_input_field);
@@ -331,6 +347,8 @@ function remove_input_field(event)
 	toggle_remove_btn_visibility(input_list, '.remove-input-field-btn');
 	
 	replace_titles(input_list.children(), get_param_model(param).type);
+	
+	digest();
 }
 
 $('.remove-input-field-btn').click(remove_input_field);
@@ -360,26 +378,31 @@ $('.add-input-collection-item-btn').click(event =>
 	
 	let list_items = input_list.children();
 	let count_many = !!list_items.find('.add-input-field-btn').length;
-	let items_length = list_items.length;
-	if(count_many) items_length -= 1;
+	let original_items_length = list_items.length;
+	if(count_many) original_items_length -= 1;
+	let new_items_length = original_items_length;
 	
 	// remove excess input fields
 	if(count_many)
 	{
-		for(let i=1;i<items_length;i++)
+		for(let i=1;i<original_items_length;i++)
 		{
 			$(list_items[i]).remove();
 		}
+		
+		new_items_length = 1;
 	}
 	
 	// reinitialize remaining input fields
-	for(let i=0;i<items_length;i++)
+	for(let i=0;i<new_items_length;i++)
 	{
 		reinitialize_input_item(param, $(list_items[i]));
 	}
 	
 	// reinitialize input list
 	reinitialize_input_list(param, input_list);
+	
+	digest();
 });
 
 function remove_input_collection_item(event)
@@ -392,6 +415,8 @@ function remove_input_collection_item(event)
 	li.remove();
 	
 	toggle_remove_btn_visibility(input_collection, '.remove-input-collection-item-btn');
+	
+	digest();
 }
 
 // -------------------
@@ -414,6 +439,126 @@ $('.remove-input-collection-item-btn').click(remove_input_collection_item);
 
 // -----------------------------------------------------------------------
 
+function get_command_results()
+{
+	return current_commands
+		.reduce((results, command_id) => 
+		{
+			const command_model = command_models[command_id];
+			const param_values = get_gui_structure_parameter_values(command_model.gui_structure);
+			const result_context = command_model.usage_structure.match(param_values);
+			
+			results[command_id] = {model: command_model, param_values: param_values, context: result_context};
+			return results;
+		}, {});
+}
+
+function digest()
+{
+	const command_results = get_command_results();
+	
+	for(command_id in command_results)
+	{
+		const command_result = command_results[command_id];
+		
+		// disabled
+		$('.parameter-wrapper')
+			.children('.data-input-wrapper, .none-switch-wrapper')
+			.removeClass('force-disabled');
+		
+		for(const param_id of command_result.context.disabled)
+		{
+			$("[data-param-id='" + param_id + "']")
+				.children('.data-input-wrapper, .none-switch-wrapper')
+				.addClass('force-disabled');
+		}
+		
+		// required
+		$('.parameter-wrapper')
+			.removeClass('required-param');
+		
+		for(const param of command_result.context.required)
+		{
+			$("[data-param-id='" + param.model.id + "']")
+				.addClass('required-param');
+		}
+	}
+	
+	const cli_text = get_cli_text(command_results);
+	$('#cli-text').text(cli_text);
+	
+	const current_command_id = current_commands[current_commands.length-1];
+	const current_command_result = command_results[current_command_id];
+	
+	const command_is_complete = !current_command_result.context.required.length && !current_command_result.context.possibly_required.length;
+	const subcommand_allowed = current_command_result.context.sub_command;
+	
+	$('#execute-btn').prop('disabled', !command_is_complete);
+	$('.sub-command-button').prop('disabled', !command_is_complete || !subcommand_allowed);
+}
+
+function get_cli_text(command_results)
+{
+	return Object.keys(command_results)
+		.reduce((previous, command_id) => 
+		{
+			const command_result = command_results[command_id];
+			const command_cli_text = get_command_cli_text(command_result.context, command_result.param_values);
+			if(command_cli_text)
+				return previous + ' ' + command_result.model.cli_command + ' ' + command_cli_text;
+			else 
+				return previous + ' ' + command_result.model.cli_command;
+		}, '');
+}
+
+function get_command_cli_text(result, param_values)
+{
+	if(!result.matched.length)
+		return '';
+	
+	return result.matched
+		.map(m => 
+		{
+			if (m.model)
+			{
+				const value = param_values.get(m.model.id);
+				return m.generate_str(value);
+			}
+			return m.generate_str();
+		})
+		.reduce((previous, param_str) => param_str ? previous + ' ' + param_str : previous);
+}
+
+function get_cli_list(command_results)
+{
+	return Object.keys(command_results)
+		.reduce((previous, command_id) => 
+		{
+			const command_result = command_results[command_id];
+			return [...previous, ...get_command_cli_list(command_result.context, command_result.param_values)];
+		}, []);
+}
+
+function get_command_cli_list(result, param_values)
+{
+	return result.matched
+		.map(m => 
+		{
+			if (m.model)
+			{
+				const value = param_values.get(m.model.id);
+				return m.generate_list(value);
+			}
+			return m.generate_list();
+		})
+		.reduce((previous, params) => [...previous, ...params], []);
+}
+
+// digest on all input changes
+$('.parameter-wrapper')
+	.find('input, select')
+	.change(digest);
+
 function get_cli_string()
 {
 	let command_args = [];
@@ -429,20 +574,42 @@ function get_cli_string()
 		
 		console.log('----------------------------------');
 		console.log(command_id);
-		param_values.forEach((value, key, map) => {console.log("[" + key + "] = ");console.log(value)});
+		param_values.forEach((value, key, map) => {console.log("[" + key + "] = " + value);});
 		
 		let result = command_model.usage_structure.match(param_values);
 		console.log(result);
 		
+		const result_param_list = result.matched
+			.map(m => 
+			{
+				if (m.model)
+				{
+					const value = param_values.get(m.model.id);
+					return m.generate_list(value);
+				}
+				return m.generate_list();
+			})
+			.reduce((previous, params) => [...previous, ...params], []);
+		
+		const result_param_str_list = result.matched
+			.map(m => 
+			{
+				if (m.model)
+				{
+					const value = param_values.get(m.model.id);
+					return m.generate_str(value);
+				}
+				return m.generate_str();
+			});
+		
+		digest();
+		
+		console.log('result_param_list:');
+		console.log(result_param_list);
+		console.log('result_param_str_list:');
+		console.log(result_param_str_list);
+		console.log(result_param_str_list.reduce((a, b) => a+' '+b, ''));
 	}
-	
-	
-	
-	// find usage that fits suplied args
-	// TODO
-	
-	// generate cli string
-	// TODO
 }
 
 function get_gui_structure_parameter_values(gui_structure)
@@ -452,6 +619,8 @@ function get_gui_structure_parameter_values(gui_structure)
 	
 	for(let element of gui_structure)
 	{
+		clear_error_message(element.gui_id);
+		
 		switch(element.constructor.name)
 		{
 			case 'GuiTabs':
@@ -464,8 +633,7 @@ function get_gui_structure_parameter_values(gui_structure)
 			{
 				for(let section of element.elements)
 				{
-					let is_active = is_section_active(section);
-					if(is_active || !element.exclusive)
+					if(is_section_active(section) || !element.exclusive)
 					{
 						let new_vals = get_gui_structure_parameter_values(section.elements);
 						accumulate_values(new_vals);
@@ -485,9 +653,20 @@ function get_gui_structure_parameter_values(gui_structure)
 			case 'GuiParameter':
 			{
 				let param_value = get_gui_parameter_value(element);
+				
 				if(param_value)
 				{
-					values.set(param_value.id, param_value.value);
+					const validation_result = validate_parameter(param_value.value, element.model);
+					
+					if(validation_result.is_valid)
+					{
+						values.set(param_value.id, param_value.value);
+					}
+					else
+					{
+						const message = validation_result.generate_message(param_value.value, element.model);
+						set_error_message(message, element.gui_id);
+					}
 				}
 				break;
 			}
@@ -495,6 +674,33 @@ function get_gui_structure_parameter_values(gui_structure)
 	}
 	
 	return values;
+}
+
+function set_error_message(message, parameter_gui_id)
+{
+	const parameter_wrapper = $('[data-gui-id='+parameter_gui_id+'].parameter-wrapper');
+	
+	parameter_wrapper
+		.find('input, select')
+		.addClass('invalid');
+		
+	parameter_wrapper
+		.find('label')
+		.last()
+		.attr('data-error', message);
+}
+
+function clear_error_message(parameter_gui_id)
+{
+	const parameter_wrapper = $('[data-gui-id='+parameter_gui_id+'].parameter-wrapper');
+	
+	parameter_wrapper
+		.find('input, select')
+		.removeClass('invalid');
+	
+	parameter_wrapper
+		.find('label')
+		.removeAttr('data-error');
 }
 
 function is_section_active(section)
@@ -559,7 +765,7 @@ function get_gui_parameter_value(parameter)
 	
 	if(value != null)
 	{
-		return {'id':parameter.model.id, 'value':value};
+		return {'id': parameter.model.id, 'value': value};
 	}
 	else
 	{
@@ -611,7 +817,12 @@ function get_input_field_value(input_field, param_model)
 				value = null;
 			}
 			
-			break;
+			if(param_model.type == 'Date' && param_model.date_format)
+			{
+				value = new Date(value).toString(param_model.date_format);
+			}
+			
+			return value;
 		}
 		case 'File':
 		{
@@ -620,20 +831,204 @@ function get_input_field_value(input_field, param_model)
 			{
 				value = file.path
 			}
-			break;
+			
+			return value;
 		}
 	}
-	return value;
 }
 
 $('#execute-btn').click(event =>
 {
-	get_cli_string();
+	const command_results = get_command_results();
+	const cli_text = get_cli_text(command_results);
+	const cli_list = get_cli_list(command_results);
+	
+	ipcRenderer.sendSync('execute_command', {text: cli_text, list: cli_list});
 });
 
+$('#close-btn').click(event =>
+{
+	ipcRenderer.sendSync('close');
+});
 
+// ------------------- CONSTRAINT VALIDATORS -------------------
 
+function validate_parameter(value, model)
+{
+	if(Array.isArray(value))
+	{
+		const invalid_result = value
+			.map(val => validate_parameter(val, model))
+			.find(res => !res.is_valid);
+		
+		if(invalid_result)
+			return invalid_result;
+		else
+			return {is_valid: true};
+	}
+	else
+	{
+		const unmet_constraint = model.constraints
+			.find(constraint => !constraint.validate(value));
+		
+		if(unmet_constraint)
+		{
+			return {is_valid: false, generate_message: (value, model) => unmet_constraint.get_message(value, model)};
+		}
+		else
+		{
+			return {is_valid: true};
+		}
+	}
+}
 
+class NumericValueConstraintValidator
+{
+	constructor(type, value)
+	{
+		this.type = type;
+		this.value = value;
+	}
+	
+	validate(input_value)
+	{
+		if(this.type == 'max')
+            return Number(input_value) <= this.value;
+        else // this.type == 'min'
+            return Number(input_value) >= this.value;
+	}
+}
+
+class DateConstraintValidator
+{
+	constructor(type, value, date_format)
+	{
+		this.type = type;
+		this.value = value;
+		this.date_format = date_format;
+	}
+	
+	validate(input_value)
+	{
+		const raw_value = _to_object_value(this.value);
+		const raw_input_value = _to_object_value(input_value);
+		
+		if(this.type == 'max')
+            return raw_input_value <= raw_value;
+        else // this.type == 'min'
+            return raw_input_value >= raw_value;
+	}
+	
+	_to_object_value(value)
+	{
+		return Date.parseExact(value, this.date_format);
+	}
+}
+
+class LengthConstraintValidator
+{
+	constructor(type, value)
+	{
+		this.type = type;
+		this.value = value;
+	}
+	
+	validate(input_value)
+	{
+        if(this.type == 'max_length')
+            return input_value.length <= this.value;
+        else // this.type == 'min_length'
+            return input_value.length >= this.value;
+	}
+}
+
+class StringFlagConstraintValidator
+{
+	constructor(type)
+	{
+		this.type = type;
+	}
+	
+	validate(input_value)
+	{
+		return (/^[a-z0-9]+$/i).test(input_value);
+	}
+}
+
+class NumberFlagConstraintValidator
+{
+	constructor(type)
+	{
+		this.type = type;
+	}
+	
+	validate(input_value)
+	{
+		return Number.isInteger(Number(input_value));
+	}
+}
+
+class FileFlagConstraintValidator
+{
+	constructor(type)
+	{
+		this.type = type;
+	}
+	
+	validate(input_value)
+	{
+		switch(this.type)
+		{
+			case 'exists':
+				return ipcRenderer.sendSync('file_exists', input_value);
+			case 'doesnt_exist':
+				return !ipcRenderer.sendSync('file_exists', input_value);
+			case 'is_file':
+				return ipcRenderer.sendSync('is_file', input_value);
+			case 'is_directory':
+				return ipcRenderer.sendSync('is_directory', input_value);
+		}
+	}
+}
+
+class RegexConstraintValidator
+{
+	constructor(pattern)
+	{
+		this.pattern = pattern;
+	}
+	
+	validate(input_value)
+	{
+		return new RegExp(this.pattern).test(input_value);
+	}
+}
+
+class CodeConstraintValidator
+{
+	constructor(code)
+	{
+		this.code = code;
+	}
+	
+	validate(input_value)
+	{
+		return eval('(function(value){ ' + this.code + ' })(input_value)');
+	}
+}
+
+class CommandCodeConstraintValidator
+{
+	constructor(code)
+	{
+		this.code = code;
+	}
+	
+	validate(input_args, input_sub_command)
+	{
+		return eval('(function(args, sub_command){ ' + this.code + ' })(input_args, input_sub_command)');
+	}
+}
 
 
 

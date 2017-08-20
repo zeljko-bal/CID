@@ -83,7 +83,7 @@ ParameterMultiplicity:
 ;
 
 GuiWidget:
-  "password"|"text_field"|"text_area"|"dropdown"|"radio_buttons"|"counter"|"slider"
+  "password"|"text_field"
 ;
 
 ChoiceParameterValue:

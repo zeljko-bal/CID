@@ -163,3 +163,16 @@ div.material-tooltip
 {
 	flex-grow: 0;
 }
+
+.force-disabled 
+{
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.required-param:after 
+{ 
+	content:'*';
+	color: #e32;
+}
+	

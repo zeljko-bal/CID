@@ -34,21 +34,23 @@ Cmd command1 "Command1":
 			help: "Help about str_par1."
 			default: "default val"
 			empty_str: Allowed
-			multiplicity: 2
+			#multiplicity: 2 # TODO test with mult = 2 and fix gui 
 			cli: "--par1 {}", "-p1={}"
 		
 		Str str_par_default_None:
 			default: None
 			cli: "--def-none={}"
+			widget: password
 		
 		Date date_par:
 			cli: "--date={}"
+			date_format: "dd.mm.yyyy"
 			
 		File file_par:
 			cli: "--file-par={*}"
 			
 		Choice choice_par:
-			cli: "--choice-par={*}"
+			cli: "--choice-par={*|,}"
 			choices: "choice1", "choice2"
 		
 		Num tuple_par:

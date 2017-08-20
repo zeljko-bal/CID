@@ -63,6 +63,12 @@
 		{%- endfor %}
 	</table>
 </div>
+{%- elif element|element_type == 'GuiGridRow' -%}
+<div class="grid-wrapper" style="padding:7px;">
+	<table>
+		{{ gui_grid_row(element)|tab_indent }}
+	</table>
+</div>
 {%- elif element|element_type == 'Parameter' -%}
 {{- gui_parameter(element, parent) }}
 {%- endif -%}
@@ -93,7 +99,7 @@
 {%- macro gui_parameter(element, parent, colspan=1, width=0, inline_description=True) %}
 <div class="parameter-wrapper {#tooltipped#}" data-param-id="{{element.id}}" data-gui-id="{{element|gui_id(parent, element.id)}}" data-param-type="{{element.type}}" data-position="bottom" data-delay="900" data-tooltip="{{element.description}}" style="padding:15px; display:flex; align-items:flex-start;">
 {%- if element.type == 'Bool' %}
-	<div style="flex-grow: 0;">
+	<div style="flex-grow: 0;" class="data-input-wrapper">
 		<input type="checkbox" id="{{(element.id+'_cb')|new_unique_id}}"{% if element.none_allowed %} class="tristate-checkbox"{% endif %}{% if element.default == None %} readonly{% elif element.default|lower == 'true' %} checked{% endif %}/>
 		<label for="{{(element.id+'_cb')|current_unique_id}}" style="white-space: nowrap;">{{element.title}}</label>
 		{%- if element.default == None %}
@@ -102,7 +108,7 @@
 	</div>
 {%- elif element.type in ['Str', 'Num', 'Date', 'File', 'Choice'] %}
 	{%- if element.type == 'Str' and element.empty_str_allowed %}
-	<div style="width: 40px; flex-grow: 0;">
+	<div style="width: 40px; flex-grow: 0;" class="none-switch-wrapper">
 		<div class="none-switch switch" style="left:15px; top:45px;">
 			<label>
 				<input type="checkbox"{% if element.default != None %} checked{% endif %}/>
@@ -115,14 +121,14 @@
 	{%- set count_many = True if element.cli_pattern_count != 1 else False %}
 	
 	{%- if not count_many and not element.multiplicity == '*' %}
-	<div style="flex-grow: {% if element.type == 'Num' %}0{% else %}1{% endif %};">
+	<div style="flex-grow: {% if element.type == 'Num' %}0{% else %}1{% endif %};" class="data-input-wrapper">
 		{{- input_field_body(element)|tab_indent(3) }}
 	</div>
 	{%- elif (count_many and not element.multiplicity == '*') or (not count_many and element.multiplicity == '*') %}
 	{%- set count = 1 if element.multiplicity == '*' or element.cli_pattern_count == '*' else element.cli_pattern_count %}
 	{{- input_list(element, count) }}
 	{%- else %}
-	<ul class="collection input-collection">
+	<ul class="collection input-collection data-input-wrapper">
 		<li class="collection-item" style="padding-bottom:0px;">
 			<span>{{element.title}}</span>
 			<a href="#!" class="secondary-content add-input-collection-item-btn"><i class="material-icons">playlist_add</i></a>
@@ -168,7 +174,7 @@
 
 {%- macro input_list(element, count) %}
 {%- set count_n = True if element.cli_pattern_count not in ['*', 1] else False %}
-<ul class="input-list">
+<ul class="input-list data-input-wrapper">
 	{%- for i in range(0, count) %}
 	<li>
 		{{- input_field_body(element, i, count_n)|tab_indent() }}
@@ -211,7 +217,7 @@
 {%- set list_item = True if i != None else False %}
 <div class="input-field {%- if element.type == 'Num' %} number-input-wrapper {%- elif element.type == 'File' %} file-field{% endif %}" data-input-id="{{multi_param_id(element, i)}}">
 {%- if element.type in ['Str', 'Num', 'Date'] %}
-	<input id="{{multi_param_id(element, i)}}" type="{% if element.type == 'Str' %}text{% elif element.type == 'Num' %}number{% elif element.type == 'Date' %}date{% endif %}"{% if element.type == 'Date' %} class="datepicker"{% endif %}{% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% elif element.type == 'Str' and element.empty_str_allowed %} disabled{% endif %}/>
+	<input id="{{multi_param_id(element, i)}}" type="{% if element.type == 'Str' %}{% if element.widget == 'password' %}password{% else %}text{% endif %}{% elif element.type == 'Num' %}number{% elif element.type == 'Date' %}date{% endif %}"{% if element.type == 'Date' %} class="datepicker"{% endif %}{% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% elif element.type == 'Str' and element.empty_str_allowed %} disabled{% endif %}/>
 	<label for="{{multi_param_id(element, i)}}">{{multi_param_title(element, i)}}</label>
 {%- elif element.type == 'File' %}
 	<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
@@ -397,7 +403,7 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 					{%- for sub_command in command.sub_commands %}
 					<tr>
 						<td class="sub-command-wrapper">
-							<button data-command-id="{{sub_command.id}}" type="button" class="btn{% if sub_command.parameters or sub_command.sub_commands %} sub-command-button{% else %} green waves-effect waves-light{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
+							<button data-command-id="{{sub_command.id}}" type="button" class="btn sub-command-button{% if sub_command.parameters or sub_command.sub_commands %} sub-command-link{% else %} green waves-effect waves-light{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
 						</td>
 						<td style="width: 15px;"/>
 						<td>
@@ -430,8 +436,8 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 				<span style="-webkit-user-select: none;">> </span><span id="cli-text">{{root_command_name}}</span> <span id="sub-command-cli-text"><span>
 			</div>
 			<div style="white-space: nowrap; margin-top: 5px; vertical-align: top;">
-				<a id="cancel-btn" class="waves-effect waves-light btn red left"><i class="material-icons right">cancel</i>Cancel</a>
-				<a id="execute-btn" class="waves-effect waves-light btn green right"><i class="material-icons right">play_arrow</i>Execute</a>
+				<a id="close-btn" class="waves-effect waves-light btn red left"><i class="material-icons right">cancel</i>Close</a>
+				<button id="execute-btn" class="waves-effect waves-light btn green right"><i class="material-icons right">play_arrow</i>Execute</button>
 			</div>
 		</div>
 		
@@ -448,6 +454,9 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 		<script type="text/javascript" src="materialize/js/materialize.min.js"></script>
 		
 		<!-- Import custom.js -->
+		<script type="text/javascript" src="lib/date.js"></script>
+		
+		<!-- Import custom.js -->
 		<script type="text/javascript" src="custom/js/custom.js"></script>
 		
 		<!-- Import gui model -->
@@ -461,22 +470,53 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 	</body>
 	
 	<script>
-		var parameter_models = 
+		const constraint_models = 
+		{
+			{%- for parameter in parameters if parameter.constraints %}
+			'{{parameter.id}}': [
+				{%- for constraint in parameter.constraints %}
+				{%- if constraint|element_type == 'NumericValueConstraint' %}
+				new Constraint(new NumericValueConstraintValidator('{{constraint.type}}', {{constraint.value}}), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'DateConstraint' %}
+				new Constraint(new DateConstraintValidator('{{constraint.type}}', '{{constraint.value}}', '{{parameter.date_format}}'), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'LengthConstraint' %}
+				new Constraint(new LengthConstraintValidator('{{constraint.type}}', {{constraint.value}}), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'StringFlagConstraint' %}
+				new Constraint(new StringFlagConstraintValidator('{{constraint.type}}'), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'NumberFlagConstraint' %}
+				new Constraint(new NumberFlagConstraintValidator('{{constraint.type}}'), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'FileFlagConstraint' %}
+				new Constraint(new FileFlagConstraintValidator('{{constraint.type}}'), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'RegexConstraint' %}
+				new Constraint(new RegexConstraintValidator('{{constraint.value}}'), `{{constraint.message}}`),
+				{%- elif constraint|element_type == 'CodeConstraint' %}
+				new Constraint(new CodeConstraintValidator(`{{constraint.value.code}}`), `{{constraint.message}}`),
+				{%- endif %}
+				{%- endfor %}
+			],
+			{%- endfor %}
+		};
+		
+		const parameter_models = 
 		{
 			{%- for parameter in parameters %}
-			'{{parameter.id}}':new ParameterModel({type:'{{parameter.type}}', id:'{{parameter.id}}' 
-				{%- if parameter.multiplicity != 1 %}, multiplicity:{{parameter.multiplicity|stringify}}{% endif %}
-				{%- if parameter.cli_pattern_count != 1 %}, count:{{parameter.cli_pattern_count|stringify}}{% endif %}
-				{%- if parameter.nonpositional and parameter.cli_pattern_vars %}, vars:{{parameter.cli_pattern_vars}}{% endif %}
-				{%- if parameter.empty_str_allowed %}, empty_str_allowed:true{% endif %}
-				{%- if parameter.nonpositional %}, prefix:'pref'{% endif %}
-				{%- if parameter.cli_separators %}, separator:'{{parameter.cli_separators[0]}}'{% endif %}
-				{%- if parameter.type == 'Bool' %}, bool_values:{positive:'pos', negative:'neg'}{% endif -%}
+			'{{parameter.id}}': new ParameterModel({type: '{{parameter.type}}', id: '{{parameter.id}}' 
+				{%- if parameter.multiplicity != 1 %}, multiplicity: {{parameter.multiplicity|stringify}}{% endif %}
+				{%- if parameter.cli_pattern_count != 1 %}, count: {{parameter.cli_pattern_count|stringify}}{% endif %}
+				{%- if parameter.nonpositional and parameter.cli_pattern_vars %}, vars: {{parameter.cli_pattern_vars}}{% endif %}
+				{%- if parameter.empty_str_allowed %}, empty_str_allowed: true{% endif %}
+				{%- if parameter.nonpositional and parameter.type != 'Bool' %}, prefix: '{{(parameter|first_cli_pattern).prefix}}'{% endif %}
+				{%- if parameter.nonpositional and parameter.type != 'Bool' %}, prefix_separated: {{(parameter|first_cli_pattern).white_space|js_bool}}{% endif %}
+				{%- if parameter.nonpositional and parameter.type != 'Bool' and (parameter|first_cli_pattern).separator %}, separator: '{{(parameter|first_cli_pattern).separator}}'{% endif %}
+				{%- if parameter.nonpositional and parameter.type != 'Bool' and (parameter|first_cli_pattern).count_char %}, count_char: '{{(parameter|first_cli_pattern).count_char}}'{% endif %}
+				{%- if parameter.type == 'Bool' %}, bool_values: {positive: '{{parameter|first_positive_cli_pattern}}', negative: '{{parameter|first_negative_cli_pattern}}'}{% endif -%}
+				{%- if parameter.type == 'Date' and parameter.date_format %}, date_format: '{{parameter.date_format}}'{% endif -%}
+				{%- if parameter.constraints %}, constraints: constraint_models['{{parameter.id}}']{% endif -%}
 			}),
 			{%- endfor %}
 		};
 		
-		var command_models = 
+		const command_models = 
 		{
 			{%- for command in commands %}
 			'{{command.id}}':new CommandModel('{{command.cli_command}}',
@@ -494,9 +534,12 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 			return parameter_models[param.attr('data-param-id')];
 		}
 		
-		var current_commands = ['{{root_command_id}}'];
+		const current_commands = ['{{root_command_id}}'];
 	
+		digest();
+		
 		// You can also require other files to run in this process
 		require('./renderer.js');
+		const {ipcRenderer} = require('electron');
 	</script>
 </html>

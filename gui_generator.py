@@ -48,9 +48,7 @@ def html_id(id):
 # ------------------------------- GUI MODEL PROCESSORS -------------------------------
 
 _supported_widgets_by_type = {
-    'Str': ['text_field', 'password', 'text_area'],
-    'Choice': ['dropdown', 'radio_buttons'],
-    'Num': ['counter', 'slider'],
+    'Str': ['text_field', 'password'],
 }
 
 def convert_row_to_grid(row):
@@ -63,7 +61,7 @@ def convert_row_to_grid(row):
 
 def check_parameter_widget(parameter):
     if parameter.widget:
-        supported_widgets = _supported_widgets_by_type[element_type(parameter)]
+        supported_widgets = _supported_widgets_by_type[parameter.type]
         if parameter.widget not in supported_widgets:
             raise Exception('parameter.widget unsupported')
 
@@ -244,6 +242,26 @@ def js_bool_filter(val):
         return 'false'
 
 
+def get_first_positive_cli_pattern(bool_param):
+    for pattern in bool_param.all_patterns:
+        if pattern.positive:
+            return pattern.positive
+    else:
+        return ''
+
+
+def get_first_negative_cli_pattern(bool_param):
+    for pattern in bool_param.all_patterns:
+        if pattern.negative:
+            return pattern.negative
+    else:
+        return ''
+
+
+def get_first_cli_pattern(param):
+    return param.all_patterns[0]
+	
+
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
 def process_model(model):
@@ -279,6 +297,9 @@ def render_gui_code(model, root_command_name, dest_path):
     env.filters['stringify'] = stringify_filter
     env.filters['gui_id'] = get_gui_id
     env.filters['js_bool'] = js_bool_filter
+    env.filters['first_positive_cli_pattern'] = get_first_positive_cli_pattern
+    env.filters['first_negative_cli_pattern'] = get_first_negative_cli_pattern
+    env.filters['first_cli_pattern'] = get_first_cli_pattern
 
     '''env.filters['have_sub_commands'] = have_sub_commands_filter'''
 
