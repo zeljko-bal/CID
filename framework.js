@@ -70,7 +70,7 @@ function replace_titles(list_items, param_type)
 	});
 }
 
-// ------------------- SECTION ICONS -------------------
+// ------------------- SECTIONS -------------------
 
 $('.collapsible-header.exclusive-section').click(event =>
 {
@@ -117,6 +117,11 @@ $('.collapsible-header.optional-section').click(event =>
 	
 	window.setTimeout(digest, 1);
 });
+
+function is_section_active(section)
+{
+	return $('[data-gui-id='+section.gui_id+'] > .collapsible-header').hasClass('active');
+}
 
 // ------------------- COMMAND PANELS -------------------
 
@@ -437,21 +442,7 @@ function toggle_remove_btn_visibility(btn_list, btn_class)
 
 $('.remove-input-collection-item-btn').click(remove_input_collection_item);
 
-// -----------------------------------------------------------------------
-
-function get_command_results()
-{
-	return current_commands
-		.reduce((results, command_id) => 
-		{
-			const command_model = command_models[command_id];
-			const param_values = get_gui_structure_parameter_values(command_model.gui_structure);
-			const result_context = command_model.usage_structure.match(param_values);
-			
-			results[command_id] = {model: command_model, param_values: param_values, context: result_context};
-			return results;
-		}, {});
-}
+// ------------------- DIGEST -------------------
 
 function digest()
 {
@@ -497,6 +488,13 @@ function digest()
 	$('.sub-command-button').prop('disabled', !command_is_complete || !subcommand_allowed);
 }
 
+// digest on all input changes
+$('.parameter-wrapper')
+	.find('input, select')
+	.change(digest);
+
+// ------------------- CLI COMMAND RENDERING -------------------
+	
 function get_cli_text(command_results)
 {
 	return Object.keys(command_results)
@@ -554,62 +552,20 @@ function get_command_cli_list(result, param_values)
 		.reduce((previous, params) => [...previous, ...params], []);
 }
 
-// digest on all input changes
-$('.parameter-wrapper')
-	.find('input, select')
-	.change(digest);
+// ------------------- VALUE EXTRACTION -------------------
 
-function get_cli_string()
+function get_command_results()
 {
-	let command_args = [];
-	
-	console.log('-==================================-');
-	for(command_id of current_commands)
-	{
-		let command_model = command_models[command_id];
-		let param_values = get_gui_structure_parameter_values(command_model.gui_structure);
-		command_args.push({'id':command_id, 'args':param_values});
-		
-		
-		
-		console.log('----------------------------------');
-		console.log(command_id);
-		param_values.forEach((value, key, map) => {console.log("[" + key + "] = " + value);});
-		
-		let result = command_model.usage_structure.match(param_values);
-		console.log(result);
-		
-		const result_param_list = result.matched
-			.map(m => 
-			{
-				if (m.model)
-				{
-					const value = param_values.get(m.model.id);
-					return m.generate_list(value);
-				}
-				return m.generate_list();
-			})
-			.reduce((previous, params) => [...previous, ...params], []);
-		
-		const result_param_str_list = result.matched
-			.map(m => 
-			{
-				if (m.model)
-				{
-					const value = param_values.get(m.model.id);
-					return m.generate_str(value);
-				}
-				return m.generate_str();
-			});
-		
-		digest();
-		
-		console.log('result_param_list:');
-		console.log(result_param_list);
-		console.log('result_param_str_list:');
-		console.log(result_param_str_list);
-		console.log(result_param_str_list.reduce((a, b) => a+' '+b, ''));
-	}
+	return current_commands
+		.reduce((results, command_id) => 
+		{
+			const command_model = command_models[command_id];
+			const param_values = get_gui_structure_parameter_values(command_model.gui_structure);
+			const result_context = command_model.usage_structure.match(param_values);
+			
+			results[command_id] = {model: command_model, param_values: param_values, context: result_context};
+			return results;
+		}, {});
 }
 
 function get_gui_structure_parameter_values(gui_structure)
@@ -674,38 +630,6 @@ function get_gui_structure_parameter_values(gui_structure)
 	}
 	
 	return values;
-}
-
-function set_error_message(message, parameter_gui_id)
-{
-	const parameter_wrapper = $('[data-gui-id='+parameter_gui_id+'].parameter-wrapper');
-	
-	parameter_wrapper
-		.find('input, select')
-		.addClass('invalid');
-		
-	parameter_wrapper
-		.find('label')
-		.last()
-		.attr('data-error', message);
-}
-
-function clear_error_message(parameter_gui_id)
-{
-	const parameter_wrapper = $('[data-gui-id='+parameter_gui_id+'].parameter-wrapper');
-	
-	parameter_wrapper
-		.find('input, select')
-		.removeClass('invalid');
-	
-	parameter_wrapper
-		.find('label')
-		.removeAttr('data-error');
-}
-
-function is_section_active(section)
-{
-	return $('[data-gui-id='+section.gui_id+'] > .collapsible-header').hasClass('active');
 }
 
 function get_gui_parameter_value(parameter)
@@ -836,6 +760,8 @@ function get_input_field_value(input_field, param_model)
 		}
 	}
 }
+
+// ------------------- MAIN BUTTONS -------------------
 
 $('#execute-btn').click(event =>
 {
@@ -1030,6 +956,33 @@ class CommandCodeConstraintValidator
 	}
 }
 
+// ------------------- VALIDATION ERROR MESSAGES -------------------
 
+function set_error_message(message, parameter_gui_id)
+{
+	const parameter_wrapper = $('[data-gui-id='+parameter_gui_id+'].parameter-wrapper');
+	
+	parameter_wrapper
+		.find('input, select')
+		.addClass('invalid');
+		
+	parameter_wrapper
+		.find('label')
+		.last()
+		.attr('data-error', message);
+}
+
+function clear_error_message(parameter_gui_id)
+{
+	const parameter_wrapper = $('[data-gui-id='+parameter_gui_id+'].parameter-wrapper');
+	
+	parameter_wrapper
+		.find('input, select')
+		.removeClass('invalid');
+	
+	parameter_wrapper
+		.find('label')
+		.removeAttr('data-error');
+}
 
 

@@ -459,12 +459,22 @@ def render_cli_code(model, root_command_name, dest_path):
 
     with open(os.path.join(dest_path, "{cmd}_cli.py".format(cmd=root_command_name)), "w") as text_file:
         text_file.write(rendered)
+		
+		
+def render_cli_runner(root_command_name, dest_path):
+    env = Environment(loader=FileSystemLoader('.'))
+    template = env.get_template('windows_cli_py_runner.template.bat')
+    rendered = template.render(command_name=root_command_name)
+    	
+    with open(os.path.join(dest_path, "{cmd}.bat".format(cmd=root_command_name)), "w") as text_file:
+        text_file.write(rendered)
 
 
 def generate_cli(cid_file, root_command_name, dest_path):
     model = parse(cid_file)
     process_model(model)
     render_cli_code(model, root_command_name, dest_path)
+    render_cli_runner(root_command_name, dest_path)
 
 
 # ------------------------------- MAIN -------------------------------

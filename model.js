@@ -103,32 +103,6 @@ class ParametersContext
 	}
 }
 
-function param_ids(params)
-{
-	return params
-		.filter(param => param.model != undefined)
-		.map(item => item.model.id)
-		.filter(id => id != undefined);
-}
-
-function quote_if_neccessary(value)
-{
-	return should_be_quoted(value) ? surround_with_quotes(value) : value;
-}
-
-function surround_with_quotes(value)
-{
-	return '"'+value.replace(/"/g, '\\"')+'"';
-}
-
-function should_be_quoted(value)
-{
-	// should_not_be_quoted if it has no white space or if it is already quoted
-	const should_not_be_quoted = /^([^\s]+|".*")$/g.test(value);
-	
-	return !should_not_be_quoted;
-}
-
 class ParameterUsage
 {
 	constructor(model)
@@ -472,6 +446,34 @@ class CodeBlock
 	{
 		this.invoke = invoke;
 	}
+}
+
+// ----------------- HELPERS -----------------
+
+function param_ids(params)
+{
+	return params
+		.filter(param => param.model != undefined)
+		.map(item => item.model.id)
+		.filter(id => id != undefined);
+}
+
+function quote_if_neccessary(value)
+{
+	return should_be_quoted(value) ? surround_with_quotes(value) : value;
+}
+
+function surround_with_quotes(value)
+{
+	return '"'+value.replace(/"/g, '\\"')+'"';
+}
+
+function should_be_quoted(value)
+{
+	// should_not_be_quoted if it has no white space or if it is already quoted
+	const should_not_be_quoted = /^([^\s]+|".*")$/g.test(value);
+	
+	return !should_not_be_quoted;
 }
 
 // ----------------- CONSTRAINT MODEL -----------------
