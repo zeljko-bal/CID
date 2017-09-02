@@ -1,8 +1,9 @@
+from os.path import realpath, join, dirname
 from textx.metamodel import metamodel_from_file
 
-from model_processor import ModelProcessor
-from reference_resolver import ReferenceResolver, ImportedReferenceDefinition
-from common import *
+from utils.model_processor import ModelProcessor
+from utils.reference_resolver import ReferenceResolver, ImportedReferenceDefinition
+from utils.common import *
 
 
 class CliOptionalGroup:
@@ -536,9 +537,10 @@ def parameter_declaration_check(command):
 
 # ------------------------------- PARSER FUNCTIONS -------------------------------
 
-def parse(script_path, grammar_path='cid_grammar.tx'):
+def parse(script_path):
+    grammar_path = join(dirname(realpath(__file__)), 'grammar', 'cid_grammar.tx')
     metamodel = metamodel_from_file(grammar_path, autokwd=True)
-
+    
     # FIRST PASS ---------------------
 
     metamodel.register_obj_processors({
@@ -566,7 +568,8 @@ def parse(script_path, grammar_path='cid_grammar.tx'):
     parameter_instances = {instance.name: instance for instance in all_defined_parameters}
     command_instances = {instance.name: instance for instance in all_defined_commands}
 
-    external_models = {file_path: parse(file_path) for file_path in set([_import.file_path for _import in model.imports])}
+    script_directory = dirname(script_path)
+    external_models = {file_path: parse(join(script_directory, file_path)) for file_path in set([_import.file_path for _import in model.imports])}
     import_definitions = {_import.alias: ImportedReferenceDefinition(_import.alias, _import.element_name, external_models[_import.file_path], _import.file_path) for _import in model.imports}
 
     reference_resolver = ReferenceResolver(parameter_instances, command_instances, import_definitions)

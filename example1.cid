@@ -109,7 +109,9 @@ Cmd command1 "Command1":
 			parameters:
 			{
 				outer_option1
-			} 
+			}
+			usage: 
+				- outer_option1
 		Cmd sub3:
 			description: "Description for command 3"
 			parameters:

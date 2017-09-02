@@ -261,7 +261,11 @@ class BooleanNonpositional:
 
 # --------------------- USAGE MODEL ---------------------
 
-class InvalidUsageException(Exception):
+class ArgumentParserException(Exception):
+    pass
+
+
+class InvalidUsageException(ArgumentParserException):
     pass
 
 
@@ -273,7 +277,7 @@ class InvalidArguments(InvalidUsageException):
     pass
 
 
-class DuplicateArgument(Exception):
+class DuplicateArgument(ArgumentParserException):
     pass
 
 
@@ -655,41 +659,46 @@ def convert_data(data, model):
 
 
 def invoke_commands(command_callbacks, root_command_id, command_models, args):
-    def get_cmd_callback(command_id, commands):
-        val = commands.get(command_id, None)
-        if not val:
-            return None, None
-        if isinstance(val, tuple):
-            return val
-        else:
-            return val, None
+    try:
+        def get_cmd_callback(command_id, commands):
+            val = commands.get(command_id, None)
+            if not val:
+                return None, None
+            if isinstance(val, tuple):
+                return val
+            else:
+                return val, None
 
-    if print_builtin_help(root_command_id, command_models, args):
-        return
+        if print_builtin_help(root_command_id, command_models, args):
+            return
 
-    matched_args = parse_cli_args(root_command_id, command_models, args)
+        matched_args = parse_cli_args(root_command_id, command_models, args)
 
-    cmd_callback, sub_commands = command_callbacks
-    command_id = root_command_id
+        cmd_callback, sub_commands = command_callbacks
+        command_id = root_command_id
 
-    while command_id:
-        command = matched_args[command_id]
+        while command_id:
+            command = matched_args[command_id]
 
-        args_count = len(getfullargspec(cmd_callback).args)
-        if isinstance(cmd_callback, (MethodType, BuiltinMethodType)):
-            args_count -= 1
-        if args_count == 1:
-            cmd_callback(command.args)
-        else:
-            cmd_callback(command.args, command.sub_command_id)
+            args_count = len(getfullargspec(cmd_callback).args)
+            if isinstance(cmd_callback, (MethodType, BuiltinMethodType)):
+                args_count -= 1
+            if args_count == 1:
+                cmd_callback(command.args)
+            else:
+                cmd_callback(command.args, command.sub_command_id)
 
-        if command.sub_command_id:
-            cmd_callback, sub_commands = get_cmd_callback(command_models[command.sub_command_id].name, sub_commands)
-            if not cmd_callback:
-                raise Exception('No callback provided for command: {}'.format(command.sub_command_id))
-            command_id = command.sub_command_id
-        else:
-            command_id = None
+            if command.sub_command_id:
+                cmd_callback, sub_commands = get_cmd_callback(command_models[command.sub_command_id].name, sub_commands)
+                if not cmd_callback:
+                    raise Exception('No callback provided for command: {}'.format(command.sub_command_id))
+                command_id = command.sub_command_id
+            else:
+                command_id = None
+    except ArgumentParserException as e:
+        print(str(e))
+        print('---------------------------------------------')
+        print(command_models[root_command_id].usage_help)
 # TODO: have only a dictionary {command_id:callback}
 
 

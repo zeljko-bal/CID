@@ -2,12 +2,18 @@ from functools import reduce
 import textwrap
 from collections import defaultdict
 import os
+from os.path import realpath, join, dirname, isdir, exists
+from os import makedirs
+from shutil import copy
 from jinja2 import Environment, FileSystemLoader
 
 from cid_parser import parse
-from model_processor import ModelProcessor
-from common import *
-from model_printer import print_model
+from utils.model_processor import ModelProcessor
+from utils.common import *
+
+
+_cli_templates_path = join(dirname(realpath(__file__)), 'templates', 'cli')
+_cli_framework_path = join(dirname(realpath(__file__)), 'framework', 'cli')
 
 
 # ------------------------------- CLI MODEL PROCESSORS -------------------------------
@@ -303,7 +309,7 @@ def wrap_lines(rows, col_width=80, row_format='  {0}  {1}'):
     return '\n'.join([_row_format.format(*row) for row in _rows])
 
 
-_usage_help_jinja_env = Environment(loader=FileSystemLoader('.'))
+_usage_help_jinja_env = Environment(loader=FileSystemLoader(_cli_templates_path))
 _usage_help_jinja_env.filters['parameters_usage_help'] = generate_parameters_usage_help
 _usage_help_jinja_env.filters['subcommands_usage_help'] = generate_subcommands_usage_help
 _usage_help_jinja_env.filters['usage_lines_repr'] = usage_lines_repr_filter
@@ -424,16 +430,8 @@ def process_model(model):
     ModelProcessor({'Command': add_builtin_help}).process_model(model)
     ModelProcessor({'Command': validate_command}).process_model(model)
 
-    # print model ---------------------
 
-    print_model(model, print_empty_attrs=False, print_empty_lists=True, omitted_attributes=[
-        # 'usage_help', 'long_usage_help',
-        'all_patterns',
-        'sub_elements',
-    ])
-
-
-def render_cli_code(model, root_command_name, dest_path):
+def render_cli_code(model, root_command_name, cli_app_path):
     # EXTRACT DATA ---------------------
     model_extractor = ElementExtractor()
     ModelProcessor(model_extractor.visitor).process_model(model)
@@ -441,8 +439,8 @@ def render_cli_code(model, root_command_name, dest_path):
     all_commands = model_extractor.all_commands
     all_parameters = model_extractor.all_parameters
 
-    # RENDER CLI TEMPLATE ---------------------
-    env = Environment(loader=FileSystemLoader('.'))
+    # RENDER CLI PARSER ---------------------
+    env = Environment(loader=FileSystemLoader(_cli_templates_path))
 
     env.filters['parameter_model'] = parameter_model_filter
     env.filters['element_type'] = element_type
@@ -452,32 +450,52 @@ def render_cli_code(model, root_command_name, dest_path):
 
     env.globals['raise'] = raise_exception_helper
 
-    template = env.get_template('cli.template.py')
-
-    rendered = template.render(root_command_name=root_command_name, root_command_id=element_id(root_command_name),
+    parser_template = env.get_template('cli_parser.template')
+    
+    parser_rendered = parser_template.render(root_command_name=root_command_name, root_command_id=element_id(root_command_name),
                                commands=all_commands, parameters=all_parameters)
 
-    with open(os.path.join(dest_path, "{cmd}_cli.py".format(cmd=root_command_name)), "w") as text_file:
-        text_file.write(rendered)
-		
-		
-def render_cli_runner(root_command_name, dest_path):
-    env = Environment(loader=FileSystemLoader('.'))
-    template = env.get_template('windows_cli_py_runner.template.bat')
-    rendered = template.render(command_name=root_command_name)
+    with open(join(cli_app_path, root_command_name + "_cli_parser.py"), "w") as text_file:
+        text_file.write(parser_rendered)
+    
+    # RENDER CLI COMMAND ---------------------
+    command_file_path = join(cli_app_path, root_command_name + '_cli.py')
+    
+    if not exists(command_file_path):
+        command_template = env.get_template('cli_command.template')
+        
+        command_rendered = command_template.render(root_command_name=root_command_name)
+        
+        with open(command_file_path, "w") as text_file:
+            text_file.write(command_rendered)
+    
+
+def copy_framework(cli_app_path):
+    if not isdir(cli_app_path):
+        makedirs(cli_app_path)
+    
+    copy(join(_cli_framework_path, "generic_cli_parser.py"), cli_app_path)
+    
+
+def render_runner_script(root_command_name, dest_path):
+    env = Environment(loader=FileSystemLoader(_cli_templates_path))
+    template = env.get_template('windows_cli_py_runner.template')
+    rendered = template.render(command_path=join(root_command_name + '_cli', root_command_name + "_cli.py"))
     	
-    with open(os.path.join(dest_path, "{cmd}.bat".format(cmd=root_command_name)), "w") as text_file:
+    with open(join(dest_path, root_command_name + ".bat"), "w") as text_file:
         text_file.write(rendered)
 
 
 def generate_cli(cid_file, root_command_name, dest_path):
+    cli_app_path = join(dest_path, root_command_name + "_cli")
     model = parse(cid_file)
     process_model(model)
-    render_cli_code(model, root_command_name, dest_path)
-    render_cli_runner(root_command_name, dest_path)
+    copy_framework(cli_app_path)
+    render_cli_code(model, root_command_name, cli_app_path)
+    render_runner_script(root_command_name, dest_path)
 
 
 # ------------------------------- MAIN -------------------------------
 
 if __name__ == '__main__':
-    generate_cli('./example1.cid', 'command1', '.')  # TODO src path as arg, # TODO root_command_name and dest path as args
+    generate_cli('D:/docs/FAX/master/projekat/cid/example1.cid', 'command1', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args

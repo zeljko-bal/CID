@@ -1,13 +1,15 @@
-from os.path import join, split
-from os import makedirs
-from shutil import copy, rmtree
+from os.path import join, split, dirname, realpath, isdir
+from shutil import copy, rmtree, copytree
 from collections import defaultdict, namedtuple
 from jinja2 import Environment, FileSystemLoader
 
 from cid_parser import parse
-from model_processor import ModelProcessor
-from common import *
-from model_printer import print_model
+from utils.model_processor import ModelProcessor
+from utils.common import *
+
+
+_gui_templates_path = join(dirname(realpath(__file__)), 'templates', 'gui')
+_gui_framework_path = join(dirname(realpath(__file__)), 'framework', 'gui')
 
 
 class GuiStructure:
@@ -260,7 +262,7 @@ def get_first_negative_cli_pattern(bool_param):
 
 def get_first_cli_pattern(param):
     return param.all_patterns[0]
-	
+    
 
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
@@ -269,12 +271,6 @@ def process_model(model):
     ModelProcessor([{'GuiSectionGroup': gui_section_group_defaults, 'Command': gui_structure_defaults, 'GuiGridRow': add_gui_grid_row_dimensions,
                      'Parameter': [parameter_description_defaults, gui_widget_defaults]}, _convert_id_visitor]).process_model(model)
     ModelProcessor({'Parameter': check_parameter_widget, 'GuiGrid': check_gui_grid, 'GuiSectionGroup': check_gui_section_group}).process_model(model)
-
-    '''print_model(model, print_empty_attrs=False, print_empty_lists=True, omitted_attributes=[ 
-        #'usage_help', 'long_usage_help', 
-        'all_patterns', 
-        'sub_elements',
-    ])'''
 
 
 def render_gui_code(model, root_command_name, dest_path):
@@ -285,9 +281,9 @@ def render_gui_code(model, root_command_name, dest_path):
     all_commands = model_extractor.all_commands
     all_parameters = model_extractor.all_parameters
 
-    # RENDER CLI TEMPLATE ---------------------
+    # RENDER GUI HTML ---------------------
     unique_id_generator = UniqueIdGenerator()
-    env = Environment(loader=FileSystemLoader('.'))
+    env = Environment(loader=FileSystemLoader(_gui_templates_path))
 
     env.filters['all_parent_commands'] = all_parent_commands
     env.filters['element_type'] = element_type
@@ -301,41 +297,62 @@ def render_gui_code(model, root_command_name, dest_path):
     env.filters['first_negative_cli_pattern'] = get_first_negative_cli_pattern
     env.filters['first_cli_pattern'] = get_first_cli_pattern
 
-    '''env.filters['have_sub_commands'] = have_sub_commands_filter'''
+    index_template = env.get_template('index.html.template')
 
-    # env.globals['raise'] = raise_exception_helper
+    index_rendered = index_template.render(root_command_name=root_command_name, root_command_id=html_id(element_id(root_command_name)), commands=all_commands, parameters=all_parameters)
+    
+    with open(join(dest_path, root_command_name + '_gui', "index.html"), "w") as text_file:
+        text_file.write(index_rendered)
+    
+    # RENDER ELECTRON PACKAGE ---------------------
+    package_template = env.get_template('electron_package.json.template')
 
-    template = env.get_template('gui.template.html')
+    package_rendered = package_template.render(command_name=root_command_name)
+    
+    with open(join(dest_path, root_command_name + '_gui', "package.json"), "w") as text_file:
+        text_file.write(package_rendered)
+  
 
-    rendered = template.render(root_command_name=root_command_name, root_command_id=html_id(element_id(root_command_name)), commands=all_commands, parameters=all_parameters)
 
-    with open(join(dest_path, "index.html"), "w") as text_file:
+def copy_framework(dest_path, root_command_name):
+    gui_app_path = join(dest_path, root_command_name + '_gui')
+    gui_temp_dir = join(dest_path, root_command_name + '_gui_temp')
+    custom_dir_path = join(gui_app_path, 'custom')
+    
+    if isdir(gui_app_path):
+        if isdir(custom_dir_path):
+            if isdir(gui_temp_dir):
+                rmtree(gui_temp_dir)
+             
+            copytree(custom_dir_path, gui_temp_dir)
+            
+        rmtree(gui_app_path)
+    
+    copytree(join(_gui_framework_path, 'app'), gui_app_path)
+    
+    if isdir(gui_temp_dir):
+        rmtree(custom_dir_path)
+        copytree(gui_temp_dir, custom_dir_path)
+        rmtree(gui_temp_dir)
+
+
+def render_runner_script(dest_path, root_command_name):
+    env = Environment(loader=FileSystemLoader(_gui_templates_path))
+    template = env.get_template('windows_gui_runner.template')
+    rendered = template.render(gui_app_path=root_command_name + '_gui')
+    
+    with open(join(dest_path, root_command_name + "_gui.bat"), "w") as text_file:
         text_file.write(rendered)
-
-
-def copy_framework(dest_path):
-    js_dir = join(dest_path, 'cid', 'js')
-    css_dir = join(dest_path, 'cid', 'css')
-    rmtree(js_dir)
-    rmtree(css_dir)
-    makedirs(js_dir)
-    makedirs(css_dir)
-    copy('framework.js', js_dir)
-    copy('model.js', js_dir)
-    copy('framework.css', css_dir)
-
 
 def generate_gui(cid_file, root_command_name, dest_path):
     model = parse(cid_file)
     process_model(model)
+    copy_framework(dest_path, root_command_name)
     render_gui_code(model, root_command_name, dest_path)
-    copy_framework(dest_path)
+    render_runner_script(dest_path, root_command_name)
 
 
 # ------------------------------- MAIN -------------------------------
 
 if __name__ == '__main__':
-    generate_gui('./example1.cid', 'command1', '../../material_html_template/generated-electron-quick-start/')  # TODO src path as arg, # TODO root_command_name and dest path as args
-    import winsound;
-
-    winsound.PlaySound('completed.wav', winsound.SND_FILENAME)
+    generate_gui('D:/docs/FAX/master/projekat/cid/example1.cid', 'command1', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args

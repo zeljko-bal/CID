@@ -1,0 +1,2 @@
+@ECHO OFF
+call python {{command_path}} %*

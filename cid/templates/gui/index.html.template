@@ -360,11 +360,11 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 <html>
     <head>
 		<!--Import Google Icon Font-->
-		<link rel="stylesheet" href="materialize/css/material-icons.css">
+		<link rel="stylesheet" href="lib/materialize/css/material-icons.css">
 		<!--Import materialize.css-->
-		<link type="text/css" rel="stylesheet" href="materialize/css/materialize.css"  media="screen,projection"/>
-		<!--Import cid_framework.css-->
-		<link type="text/css" rel="stylesheet" href="cid/css/framework.css"  media="screen,projection"/>
+		<link type="text/css" rel="stylesheet" href="lib/materialize/css/materialize.css"  media="screen,projection"/>
+		<!--Import framework.css-->
+		<link type="text/css" rel="stylesheet" href="framework/css/framework.css"  media="screen,projection"/>
 		<!--Import custom.css-->
 		<link type="text/css" rel="stylesheet" href="custom/css/custom.css"  media="screen,projection"/>
 	</head>
@@ -403,7 +403,7 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 					{%- for sub_command in command.sub_commands %}
 					<tr>
 						<td class="sub-command-wrapper">
-							<button data-command-id="{{sub_command.id}}" type="button" class="btn sub-command-button{% if sub_command.parameters or sub_command.sub_commands %} sub-command-link{% else %} green waves-effect waves-light{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
+							<button data-command-id="{{sub_command.id}}" type="button" class="btn sub-command-button{% if sub_command.parameters or sub_command.sub_commands %} sub-command-link{% else %} sub-command-execute green waves-effect waves-light{% endif %}"><span>{{sub_command.title}}</span><i class="material-icons">{% if sub_command.parameters or sub_command.sub_commands %}navigate_next{% else %}play_arrow{% endif %}</i></button>
 						</td>
 						<td style="width: 15px;"/>
 						<td>
@@ -444,28 +444,31 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 		<br/><br/><br/><br/><br/><br/><br/><br/><br/>
 		
 		<!-- Script imports -->
-		<!-- script-import hack for electron, http://stackoverflow.com/questions/32621988/electron-jquery-is-not-defined -->
+		<!-- script-import hack for electron START, http://stackoverflow.com/questions/32621988/electron-jquery-is-not-defined -->
 		<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
 		
 		<!--Import jQuery before materialize.js-->
 		<!-- jQuery -->
-		<script type="text/javascript" src="materialize/js/jquery-2.1.1.min.js"></script>
-		<!-- Include all compiled bootstrap plugins -->
-		<script type="text/javascript" src="materialize/js/materialize.min.js"></script>
+		<script type="text/javascript" src="lib/materialize/js/jquery-2.1.1.min.js"></script>
 		
-		<!-- Import custom.js -->
+		<!-- Include all compiled bootstrap plugins -->
+		<script type="text/javascript" src="lib/materialize/js/materialize.min.js"></script>
+		
+		<!-- Import third party libs -->
 		<script type="text/javascript" src="lib/date.js"></script>
 		
 		<!-- Import custom.js -->
 		<script type="text/javascript" src="custom/js/custom.js"></script>
 		
-		<!-- Import gui model -->
-		<script type="text/javascript" src="cid/js/model.js"></script>
-		
 		<!-- Import framework code -->
-		<script type="text/javascript" src="cid/js/framework.js"></script>
+		<script type="text/javascript" src="framework/js/model.js"></script>
+		<script type="text/javascript" src="framework/js/utils.js"></script>
+		<script type="text/javascript" src="framework/js/validation.js"></script>
+		<script type="text/javascript" src="framework/js/cli_rendering.js"></script>
+		<script type="text/javascript" src="framework/js/digest.js"></script>
+		<script type="text/javascript" src="framework/js/element_behaviour.js"></script>
 		
-		<!-- script-import hack for electron -->
+		<!-- script-import hack for electron END -->
 		<script>if (window.module) module = window.module;</script>
 	</body>
 	

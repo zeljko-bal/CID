@@ -5,7 +5,7 @@ from collections import namedtuple, defaultdict
 from operator import add
 from functools import reduce
 
-from common import *
+from utils.common import *
 
 
 class ModelProcessor:

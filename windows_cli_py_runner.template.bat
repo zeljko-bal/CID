@@ -1,1 +1,0 @@
-call python {{command_name}}_cli.py %*

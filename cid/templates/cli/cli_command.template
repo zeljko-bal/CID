@@ -1,0 +1,22 @@
+
+from {{root_command_name}}_cli_parser import command, parse_cli_args, invoke_commands, print_builtin_help, get_cli_args, \
+    root_command_name, root_command_id, parameters as parameter_models, commands as command_models
+
+'''
+    Define custom command logic here.
+    This file can be edited manually and it will not get overwritten by the cid generator.
+'''
+
+if __name__ == '__main__':
+    # placeholder callback generator that prints all supplied arguments
+    # replace with custom logic
+    def get_print_callbacks(command):
+        callback = lambda args: print('{}:'.format(command.name), '\n   ', args, '\n')
+        
+        if command.sub_commands:
+            return callback, {c.name:get_print_callbacks(c) for c in command.sub_commands}
+        else:
+            return callback
+    
+    invoke_commands(get_print_callbacks(command_models[root_command_id]))
+    

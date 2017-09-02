@@ -236,14 +236,3 @@ def print_builtin_help(args=None):
 		args = get_cli_args()
 	
 	_print_builtin_help(root_command_id, commands, args)
-
-if __name__ == '__main__':
-	def get_print_callbacks(command):
-		callback = lambda args: print('{}:'.format(command.name), '\n   ', args, '\n')
-		
-		if command.sub_commands:
-			return callback, {c.name:get_print_callbacks(c) for c in command.sub_commands}
-		else:
-			return callback
-	
-	invoke_commands(get_print_callbacks(commands[root_command_id]))

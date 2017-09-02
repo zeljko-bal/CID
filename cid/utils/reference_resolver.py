@@ -1,4 +1,4 @@
-from common import *
+from utils.common import *
 
 
 class ImportedReferenceDefinition:
