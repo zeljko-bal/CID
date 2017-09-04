@@ -1,0 +1,11 @@
+{
+  "name": "cid_generator",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron-prebuilt": "^1.2.0"
+  }
+}

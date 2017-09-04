@@ -7,9 +7,9 @@ from os import makedirs
 from shutil import copy
 from jinja2 import Environment, FileSystemLoader
 
-from cid_parser import parse
-from utils.model_processor import ModelProcessor
-from utils.common import *
+from cid.cid_parser import parse
+from cid.utils.model_processor import ModelProcessor
+from cid.utils.common import *
 
 
 _cli_templates_path = join(dirname(realpath(__file__)), 'templates', 'cli')
@@ -484,18 +484,29 @@ def render_runner_script(root_command_name, dest_path):
     	
     with open(join(dest_path, root_command_name + ".bat"), "w") as text_file:
         text_file.write(rendered)
+        
+        
+def is_root_command_defined(model, root_command_name):
+    model_extractor = ElementExtractor()
+    ModelProcessor(model_extractor.visitor).process_model(model)
 
-
+    return root_command_name in [command.name for command in model_extractor.all_commands]
+        
+        
 def generate_cli(cid_file, root_command_name, dest_path):
     cli_app_path = join(dest_path, root_command_name + "_cli")
     model = parse(cid_file)
+    if not is_root_command_defined(model, root_command_name):
+        print("Error: The specified root command is not defined.")
+        return
     process_model(model)
     copy_framework(cli_app_path)
     render_cli_code(model, root_command_name, cli_app_path)
     render_runner_script(root_command_name, dest_path)
+    print("Generated cli successfully.")
 
 
 # ------------------------------- MAIN -------------------------------
 
 if __name__ == '__main__':
-    generate_cli('D:/docs/FAX/master/projekat/cid/example1.cid', 'command1', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args
+    generate_cli('D:/docs/FAX/master/projekat/cid/cid_generator.cid', 'cid_generator', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args

@@ -1,0 +1,38 @@
+
+import /textx_common/metamodel as /metamodel
+import /textx_common/model as /model
+import /textx_common/case_insensitive as /case_insensitive
+import /textx_common/debug_mode as /debug_mode
+
+Cmd textx "textX":
+	description: "textX checker and visualizer"
+	parameters:
+	{
+		/case_insensitive
+		/debug_mode
+	}
+	usage: [/case_insensitive] [/debug_mode] {sub_command}
+	commands:
+	{
+		Cmd check "Check":
+			description: "Check the correctness of a meta-model and optionally a model based on that meta-model."
+			parameters:
+			{
+				/metamodel
+				/model
+			}
+			usage: /metamodel [/model]
+		
+		Cmd visualize "Visualize":
+			description: "Generate a .dot file based on a meta-model or a model."
+			help: "The command will generate .dot files for your meta-model/model. 
+				You can convert the .dot files to images or use a .dot viewer to visualize your meta-model/model. 
+				Find more details on: https://en.wikipedia.org/wiki/DOT_(graph_description_language)"
+			parameters:
+			{
+				/metamodel
+				/model
+			}
+			usage: /metamodel [/model]
+	}
+

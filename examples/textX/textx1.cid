@@ -1,0 +1,22 @@
+
+import /textx_common/metamodel as /metamodel
+import /textx_common/model as /model
+import /textx_common/case_insensitive as /case_insensitive
+import /textx_common/debug_mode as /debug_mode
+
+Cmd textx "textX":
+	description: "textX checker and visualizer"
+	parameters:
+	{
+		Choice command "Command":
+			description: "Choose whether to visualize or only check the meta-model/model."
+			choices: "check", "visualize"
+		
+		/metamodel
+		/model
+		/case_insensitive
+		/debug_mode
+	}
+	usage: [/case_insensitive] [/debug_mode] command /metamodel [/model]
+
+

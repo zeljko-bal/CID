@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<!-- Automatically generated code. Do not edit directly. -->
+<html>
+    <head>
+		<!--Import Google Icon Font-->
+		<link rel="stylesheet" href="lib/materialize/css/material-icons.css">
+		<!--Import materialize.css-->
+		<link type="text/css" rel="stylesheet" href="lib/materialize/css/materialize.css"  media="screen,projection"/>
+		<!--Import framework.css-->
+		<link type="text/css" rel="stylesheet" href="framework/css/framework.css"  media="screen,projection"/>
+		<!--Import custom.css-->
+		<link type="text/css" rel="stylesheet" href="custom/css/custom.css"  media="screen,projection"/>
+	</head>
+    <body>
+		<div class="container">
+			<div id="_cid_generator" class="command-panel">
+				<div style="display:flex; align-items:baseline;">
+					<h4 style="flex-grow: 1;">CID Generator</h4>
+				</div>
+				<hr/>
+				<div class="parameter-section">
+					<div class="parameter-wrapper " data-param-id="_cid_generator_cid_file" data-gui-id="_cid_generator_0__cid_generator_cid_file" data-param-type="File" data-position="bottom" data-delay="900" data-tooltip="" style="padding:15px; display:flex; align-items:flex-start;">
+						<div style="flex-grow: 1;" class="data-input-wrapper">
+								<div class="input-field file-field" data-input-id="_cid_generator_cid_file">
+									<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
+										<i class="material-icons left">insert_drive_file</i> <!-- folder ili file ikona po ogranicenju -->
+										<span>Command Description</span>
+										<input type="file"/>
+									</div>
+									<div class="file-path-wrapper">
+										<input id="_cid_generator_cid_file" class="file-path validate" type="text"/>
+										<label for="_cid_generator_cid_file"><div style='visibility: hidden'>css layouting hack</div></label>
+									</div>
+								</div>
+						</div>
+					</div>
+					<div class="parameter-wrapper " data-param-id="_cid_generator_root_command" data-gui-id="_cid_generator_1__cid_generator_root_command" data-param-type="Str" data-position="bottom" data-delay="900" data-tooltip="" style="padding:15px; display:flex; align-items:flex-start;">
+						<div style="flex-grow: 1;" class="data-input-wrapper">
+								<div class="input-field" data-input-id="_cid_generator_root_command">
+									<input id="_cid_generator_root_command" type="text"/>
+									<label for="_cid_generator_root_command">Root Command</label>
+								</div>
+						</div>
+					</div>
+					<div class="parameter-wrapper " data-param-id="_cid_generator_dest_path" data-gui-id="_cid_generator_2__cid_generator_dest_path" data-param-type="File" data-position="bottom" data-delay="900" data-tooltip="" style="padding:15px; display:flex; align-items:flex-start;">
+						<div style="flex-grow: 1;" class="data-input-wrapper">
+								<div class="input-field file-field" data-input-id="_cid_generator_dest_path">
+									<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
+										<i class="material-icons left">folder</i> <!-- folder ili file ikona po ogranicenju -->
+										<span>Destination</span>
+										<input type="file" webkitdirectory/>
+									</div>
+									<div class="file-path-wrapper">
+										<input id="_cid_generator_dest_path" class="file-path validate" type="text"/>
+										<label for="_cid_generator_dest_path"><div style='visibility: hidden'>css layouting hack</div></label>
+									</div>
+								</div>
+						</div>
+					</div>
+				</div>
+				<hr/>
+				<table class="bordered">
+					<tr>
+						<td class="sub-command-wrapper">
+							<button data-command-id="_cid_generator_generate_cli" type="button" class="btn sub-command-button sub-command-execute green waves-effect waves-light"><span>Generate CLI</span><i class="material-icons">play_arrow</i></button>
+						</td>
+						<td style="width: 15px;"/>
+						<td>
+							
+						</td>
+						<td>
+						</td>
+					</tr>
+					<tr>
+						<td class="sub-command-wrapper">
+							<button data-command-id="_cid_generator_generate_gui" type="button" class="btn sub-command-button sub-command-execute green waves-effect waves-light"><span>Generate GUI</span><i class="material-icons">play_arrow</i></button>
+						</td>
+						<td style="width: 15px;"/>
+						<td>
+							
+						</td>
+						<td>
+						</td>
+					</tr>
+					<tr>
+						<td class="sub-command-wrapper">
+							<button data-command-id="_cid_generator_generate_both" type="button" class="btn sub-command-button sub-command-execute green waves-effect waves-light"><span>Generate Both</span><i class="material-icons">play_arrow</i></button>
+						</td>
+						<td style="width: 15px;"/>
+						<td>
+							
+						</td>
+						<td>
+						</td>
+					</tr>
+				</table>
+			</div>
+			<div class="card-panel blue-grey darken-1 white-text text-darken-2">
+				<span style="-webkit-user-select: none;">> </span><span id="cli-text">cid_generator</span> <span id="sub-command-cli-text"><span>
+			</div>
+			<div style="white-space: nowrap; margin-top: 5px; vertical-align: top;">
+				<a id="close-btn" class="waves-effect waves-light btn red left"><i class="material-icons right">cancel</i>Close</a>
+				<button id="execute-btn" class="waves-effect waves-light btn green right"><i class="material-icons right">play_arrow</i>Execute</button>
+			</div>
+		</div>
+		
+		<br/><br/><br/><br/><br/><br/><br/><br/><br/>
+		
+		<!-- Script imports -->
+		<!-- script-import hack for electron START, http://stackoverflow.com/questions/32621988/electron-jquery-is-not-defined -->
+		<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+		
+		<!--Import jQuery before materialize.js-->
+		<!-- jQuery -->
+		<script type="text/javascript" src="lib/materialize/js/jquery-2.1.1.min.js"></script>
+		
+		<!-- Include all compiled bootstrap plugins -->
+		<script type="text/javascript" src="lib/materialize/js/materialize.min.js"></script>
+		
+		<!-- Import third party libs -->
+		<script type="text/javascript" src="lib/date.js"></script>
+		
+		<!-- Import custom.js -->
+		<script type="text/javascript" src="custom/js/custom.js"></script>
+		
+		<!-- Import framework code -->
+		<script type="text/javascript" src="framework/js/model.js"></script>
+		<script type="text/javascript" src="framework/js/utils.js"></script>
+		<script type="text/javascript" src="framework/js/validation.js"></script>
+		<script type="text/javascript" src="framework/js/cli_rendering.js"></script>
+		<script type="text/javascript" src="framework/js/digest.js"></script>
+		<script type="text/javascript" src="framework/js/element_behaviour.js"></script>
+		
+		<!-- script-import hack for electron END -->
+		<script>if (window.module) module = window.module;</script>
+	</body>
+	
+	<script>
+		const constraint_models = 
+		{
+			'_cid_generator_cid_file': [
+				new Constraint(new FileFlagConstraintValidator('exists'), `The provided file doesn't exist.`),
+				new Constraint(new FileFlagConstraintValidator('is_file'), `The provided path is not a file.`),
+				new Constraint(new RegexConstraintValidator('.+\.cid$'), `must be a cid script file (*.cid)`),
+			],
+			'_cid_generator_dest_path': [
+				new Constraint(new FileFlagConstraintValidator('exists'), `The provided file doesn't exist.`),
+				new Constraint(new FileFlagConstraintValidator('is_directory'), `The provided path is not a directory.`),
+			],
+		};
+		
+		const parameter_models = 
+		{
+			'_cid_generator_cid_file': new ParameterModel({type: 'File', id: '_cid_generator_cid_file', constraints: constraint_models['_cid_generator_cid_file']}),
+			'_cid_generator_root_command': new ParameterModel({type: 'Str', id: '_cid_generator_root_command'}),
+			'_cid_generator_dest_path': new ParameterModel({type: 'File', id: '_cid_generator_dest_path', constraints: constraint_models['_cid_generator_dest_path']}),
+		};
+		
+		const command_models = 
+		{
+			'_cid_generator_generate_cli':new CommandModel('generate_cli',new ParameterGroup([
+			])),
+			'_cid_generator_generate_gui':new CommandModel('generate_gui',new ParameterGroup([
+			])),
+			'_cid_generator_generate_both':new CommandModel('generate_both',new ParameterGroup([
+			])),
+			'_cid_generator':new CommandModel('cid_generator',new ParameterGroup([
+				new ParameterUsage(parameter_models['_cid_generator_cid_file']),
+				new ParameterUsage(parameter_models['_cid_generator_root_command']),
+				new ParameterUsage(parameter_models['_cid_generator_dest_path']),
+				new SubCommand(),
+			]),
+			[
+				new GuiParameter('_cid_generator_0__cid_generator_cid_file', parameter_models['_cid_generator_cid_file']),
+				new GuiParameter('_cid_generator_1__cid_generator_root_command', parameter_models['_cid_generator_root_command']),
+				new GuiParameter('_cid_generator_2__cid_generator_dest_path', parameter_models['_cid_generator_dest_path']),
+			]),
+		};
+		
+		function get_param_model(param)
+		{
+			return parameter_models[param.attr('data-param-id')];
+		}
+		
+		const current_commands = ['_cid_generator'];
+	
+		digest();
+		
+		// You can also require other files to run in this process
+		require('./renderer.js');
+		const {ipcRenderer} = require('electron');
+	</script>
+</html>

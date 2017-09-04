@@ -1,0 +1,29 @@
+
+Cmd cid_generator "CID Generator":
+	description: ""
+	help: ""
+	parameters:
+	{
+		File cid_file "Command Description":
+			description: ""
+			constraints:
+				exists
+				is_file
+				regex: /.+\.cid$/
+					"must be a cid script file (*.cid)"
+					
+		Str root_command "Root Command":
+			description: ""
+					
+		File dest_path "Destination":
+			description: ""
+			constraints:
+				exists
+				is_directory
+	}
+	commands:
+	{
+		Cmd generate_cli "Generate CLI"
+		Cmd generate_gui "Generate GUI"
+		Cmd generate_both "Generate Both"
+	}

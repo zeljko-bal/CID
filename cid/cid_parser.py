@@ -1,9 +1,9 @@
 from os.path import realpath, join, dirname
 from textx.metamodel import metamodel_from_file
 
-from utils.model_processor import ModelProcessor
-from utils.reference_resolver import ReferenceResolver, ImportedReferenceDefinition
-from utils.common import *
+from cid.utils.model_processor import ModelProcessor
+from cid.utils.reference_resolver import ReferenceResolver, ImportedReferenceDefinition
+from cid.utils.common import *
 
 
 class CliOptionalGroup:
@@ -107,9 +107,6 @@ def process_command(command):
 
     if contains_duplicate_names(command.sub_commands):
         raise Exception('same_name_commands_check')
-
-    if command.type == 'Cmd' and element_type(command.parent) != 'Script':
-        print('Warning: command {} of type Cmd found as a sub command.'.format(command.name))
 
 
 # -------------------------------
@@ -267,7 +264,7 @@ def process_parameter(parameter):
             'Num': ['NumericValueConstraint', 'NumberFlagConstraint', 'CodeConstraint'],
             'Bool': ['CodeConstraint'],
             'Date': ['DateConstraint', 'CodeConstraint'],
-            'File': ['FileFlagConstraint', 'CodeConstraint'],
+            'File': ['FileFlagConstraint', 'CodeConstraint', 'RegexConstraint'],
         }[parameter.type]
         if element_type(constraint) not in supported_constraints:
             raise Exception(
@@ -294,6 +291,12 @@ def process_cli_or_group(or_group):
     for element in or_group.elements:
         if element_type(element) == 'CliOptionalGroup':
             print('warning: CliOptionalGroup in or_group')
+            
+            
+# -------------------------------
+            
+def process_regex_constraint(regex_constraint):
+    regex_constraint.value = regex_constraint.value[1:-1]
 
 
 # ------------------------------- SECOND PASS -------------------------------
@@ -477,10 +480,6 @@ def validate_command(command, parents):
             raise Exception('Parameter name collision between {cmd}.{param} and a top level free parameter.'.format(
                 cmd=command.name, param=parameter.name))
 
-        if parameter.default is None:
-            if all([is_parameter_required(parameter, u) for u in command.usages]):
-                print('Warning: parameter.default is None and parameter is required in all usage patterns.')
-
     for sub_command in command.sub_commands:
         if sub_command.name in [c.name for c in script.free_commands] and not sub_command in script.free_commands:
             raise Exception(
@@ -551,6 +550,7 @@ def parse(script_path):
         'Command': process_command,
         'Parameter': process_parameter,
         'CliOrGroup': process_cli_or_group,
+        'RegexConstraint':process_regex_constraint,
     })
 
     model = metamodel.model_from_file(script_path)

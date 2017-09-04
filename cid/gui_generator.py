@@ -3,9 +3,9 @@ from shutil import copy, rmtree, copytree
 from collections import defaultdict, namedtuple
 from jinja2 import Environment, FileSystemLoader
 
-from cid_parser import parse
-from utils.model_processor import ModelProcessor
-from utils.common import *
+from cid.cid_parser import parse
+from cid.utils.model_processor import ModelProcessor
+from cid.utils.common import *
 
 
 _gui_templates_path = join(dirname(realpath(__file__)), 'templates', 'gui')
@@ -264,6 +264,9 @@ def get_first_cli_pattern(param):
     return param.all_patterns[0]
     
 
+def has_directory_constraint_filter(param):
+    return 'is_directory' in [constraint.type for constraint in param.constraints if element_type(constraint) == 'FileFlagConstraint']
+
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
 def process_model(model):
@@ -296,6 +299,7 @@ def render_gui_code(model, root_command_name, dest_path):
     env.filters['first_positive_cli_pattern'] = get_first_positive_cli_pattern
     env.filters['first_negative_cli_pattern'] = get_first_negative_cli_pattern
     env.filters['first_cli_pattern'] = get_first_cli_pattern
+    env.filters['has_directory_constraint'] = has_directory_constraint_filter
 
     index_template = env.get_template('index.html.template')
 
@@ -311,7 +315,6 @@ def render_gui_code(model, root_command_name, dest_path):
     
     with open(join(dest_path, root_command_name + '_gui', "package.json"), "w") as text_file:
         text_file.write(package_rendered)
-  
 
 
 def copy_framework(dest_path, root_command_name):
@@ -344,15 +347,27 @@ def render_runner_script(dest_path, root_command_name):
     with open(join(dest_path, root_command_name + "_gui.bat"), "w") as text_file:
         text_file.write(rendered)
 
+        
+def is_root_command_defined(model, root_command_name):
+    model_extractor = ElementExtractor()
+    ModelProcessor(model_extractor.visitor).process_model(model)
+
+    return root_command_name in [command.name for command in model_extractor.all_commands]
+    
+
 def generate_gui(cid_file, root_command_name, dest_path):
     model = parse(cid_file)
+    if not is_root_command_defined(model, root_command_name):
+        print("Error: The specified root command is not defined.")
+        return
     process_model(model)
     copy_framework(dest_path, root_command_name)
     render_gui_code(model, root_command_name, dest_path)
     render_runner_script(dest_path, root_command_name)
+    print("Generated gui successfully.")
 
 
 # ------------------------------- MAIN -------------------------------
 
 if __name__ == '__main__':
-    generate_gui('D:/docs/FAX/master/projekat/cid/example1.cid', 'command1', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args
+    generate_gui('D:/docs/FAX/master/projekat/cid/cid_generator.cid', 'cid_generator', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args

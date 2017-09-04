@@ -221,12 +221,13 @@
 	<label for="{{multi_param_id(element, i)}}">{{multi_param_title(element, i)}}</label>
 {%- elif element.type == 'File' %}
 	<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
-		<i class="material-icons left">insert_drive_file</i> <!-- folder ili file ikona po ogranicenju -->
+		<i class="material-icons left">{% if element|has_directory_constraint %}folder{% else %}insert_drive_file{% endif %}</i> <!-- folder ili file ikona po ogranicenju -->
 		<span>{{multi_param_title(element, i)}}</span>
-		<input type="file"/> <!--webkitdirectory dodati za ogranicenje directory-->
+		<input type="file"{% if element|has_directory_constraint %} webkitdirectory{% endif %}/>
 	</div>
 	<div class="file-path-wrapper">
 		<input id="{{multi_param_id(element, i)}}" class="file-path validate" type="text"/>
+		<label for="{{multi_param_id(element, i)}}"><div style='visibility: hidden'>css layouting hack</div></label>
 	</div>
 {%- elif element.type == 'Choice' %}
 	<div style="padding-bottom:1px;">
@@ -407,7 +408,7 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 						</td>
 						<td style="width: 15px;"/>
 						<td>
-							{{sub_command.description}} asdasd sdfsd asd
+							{{sub_command.description}}
 						</td>
 						<td>
 							{%- if sub_command.help %}

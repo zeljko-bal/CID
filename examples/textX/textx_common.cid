@@ -1,0 +1,20 @@
+
+File metamodel "Meta Model":
+	description: "Meta-model file name, must be a textX grammar file (*.tx)."
+	constraints:
+		custom:
+			<<
+				return value.endsWith('.tx');
+			>>
+			"must be a textX grammar file (*.tx)"
+
+File model "Model":
+	description: "Model file name."
+	
+Bool case_insensitive "Case Insensitive":
+	description: "case-insensitive parsing"
+	cli: "-i"
+
+Bool debug_mode "Debug Mode":
+	description: "Run in debug mode."
+	cli: "-d"

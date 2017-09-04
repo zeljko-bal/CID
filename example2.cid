@@ -1,5 +1,5 @@
 
-Sub external_option1 "Testt"
+Cmd external_option1 "Testt"
 
 Bool external_option1 "ex option1":
 	description: "I,m externallllll"
