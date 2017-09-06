@@ -1,11 +1,12 @@
 
 Cmd cid_generator "CID Generator":
-	description: ""
-	help: ""
+	description: "Generate a graphical and/or command line interface from a CID script."
+	help: "CID (Command Interface Description) is a language for describing command interfaces (such as this one), 
+		that can be used to generate graphical or command line interfaces. For more information see hhttps://github.com/zeljko-bal."
 	parameters:
 	{
 		File cid_file "Command Description":
-			description: ""
+			description: "The CID script file that contains a description of the command interface to generate. (*.cid)"
 			constraints:
 				exists
 				is_file
@@ -13,17 +14,26 @@ Cmd cid_generator "CID Generator":
 					"must be a cid script file (*.cid)"
 					
 		Str root_command "Root Command":
-			description: ""
+			description: "The name of the entry point command of the interface."
 					
 		File dest_path "Destination":
-			description: ""
+			description: "The destination directory where to generate the interface."
 			constraints:
 				exists
 				is_directory
 	}
 	commands:
 	{
-		Cmd generate_cli "Generate CLI"
-		Cmd generate_gui "Generate GUI"
-		Cmd generate_both "Generate Both"
+		Cmd generate_cli "Generate CLI":
+			description: "Generate a command line parser based on the provided description."
+			help: "The generated command line parser is implemented in python. 
+				The parser takes care of parsing cli arguments, basic validation and displaying help messages. 
+				When the parser successfully parses the arguments it invokes the supplied callbacks for every parsed command. 
+				A placeholder file is generated that initially contains callbacks that simply print the arguments, but you can replace them with your custom logic."
+		Cmd generate_gui "Generate GUI":
+			description: "Generate a graphical user interface based on the provided description."
+			help: "The generated GUI is based on the electron framework and represents a form with input widgets that correspond to command parameters.
+				When executed the GUI invokes the command as a CLI command (it can be the command generated from the same CID script or an external cli programm with compatible interface)."
+		Cmd generate_both "Generate Both":
+			description: "Generate both GUI and CLI."
 	}

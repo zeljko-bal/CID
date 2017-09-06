@@ -6,8 +6,8 @@ Bool outer_option1:
 	cli: "--outer-option1", "-oo1|-noo1"
 
 Cmd command1 "Command1":
-	description: "Command 1, Command 1, does whatever command 1 does."
-	help: "help"
+	description: "Example description of command1."
+	help: "Example help for command1."
 	parameters:
 	{
 		/exo1
@@ -34,7 +34,6 @@ Cmd command1 "Command1":
 			help: "Help about str_par1."
 			default: "default val"
 			empty_str: Allowed
-			#multiplicity: 2 # TODO test with mult = 2 and fix gui 
 			cli: "--par1 {}", "-p1={}"
 		
 		Str str_par_default_None:
@@ -86,7 +85,7 @@ Cmd command1 "Command1":
 		>>
 		"command constraint message"
 	usage:
-		- [/exo1] [/example2/external_option2] outer_option1 positional1 -- positional_many
+		- [/exo1] [/example2/external_option2] num_par1 positional1 -- positional_many
 		- str_par1 outer_option1 {sub_command}
 		- [str_par_default_None date_par] counter_par file_par|choice_par (tuple_par tuple_par2 many_par)|separated_par
 	#gui:
