@@ -102,44 +102,60 @@ commands['/cid_generator'].sub_commands = [commands['/cid_generator/generate_cli
 # -------------------- COMMAND USAGE HELP --------------------
 
 # /cid_generator/generate_cli usage_help
-commands['/cid_generator/generate_cli'].usage_help = '''Usage:  cid_generator generate_cli 
+commands['/cid_generator/generate_cli'].usage_help = '''Generate a command line parser based on the provided description.
+
+Usage:  cid_generator generate_cli 
 
 Parameters:
   -h, --help  Shows this help message. For more detailed help type: cid_generator
               generate_cli -h -a.'''
 
 # /cid_generator/generate_cli long_usage_help
-commands['/cid_generator/generate_cli'].long_usage_help = '''Usage:  cid_generator generate_cli 
+commands['/cid_generator/generate_cli'].long_usage_help = '''Generate a command line parser based on the provided description.
+
+Usage:  cid_generator generate_cli 
 
 Parameters:
   -h, --help  Shows a shorter help message. For this help message type:
               cid_generator generate_cli -h -a. All detailed help parameters: -a,
-              --all.'''
+              --all.
+
+The generated command line parser is implemented in python. The parser takes care of parsing cli arguments, basic validation and displaying help messages. When the parser successfully parses the arguments it invokes the supplied callbacks for every parsed command. A placeholder file is generated that initially contains callbacks that simply print the arguments, but you can replace them with your custom logic.'''
 
 # /cid_generator/generate_gui usage_help
-commands['/cid_generator/generate_gui'].usage_help = '''Usage:  cid_generator generate_gui 
+commands['/cid_generator/generate_gui'].usage_help = '''Generate a graphical user interface based on the provided description.
+
+Usage:  cid_generator generate_gui 
 
 Parameters:
   -h, --help  Shows this help message. For more detailed help type: cid_generator
               generate_gui -h -a.'''
 
 # /cid_generator/generate_gui long_usage_help
-commands['/cid_generator/generate_gui'].long_usage_help = '''Usage:  cid_generator generate_gui 
+commands['/cid_generator/generate_gui'].long_usage_help = '''Generate a graphical user interface based on the provided description.
+
+Usage:  cid_generator generate_gui 
 
 Parameters:
   -h, --help  Shows a shorter help message. For this help message type:
               cid_generator generate_gui -h -a. All detailed help parameters: -a,
-              --all.'''
+              --all.
+
+The generated GUI is based on the electron framework and represents a form with input widgets that correspond to command parameters. When executed the GUI invokes the command as a CLI command (it can be the command generated from the same CID script or an external cli programm with compatible interface).'''
 
 # /cid_generator/generate_both usage_help
-commands['/cid_generator/generate_both'].usage_help = '''Usage:  cid_generator generate_both 
+commands['/cid_generator/generate_both'].usage_help = '''Generate both GUI and CLI.
+
+Usage:  cid_generator generate_both 
 
 Parameters:
   -h, --help  Shows this help message. For more detailed help type: cid_generator
               generate_both -h -a.'''
 
 # /cid_generator/generate_both long_usage_help
-commands['/cid_generator/generate_both'].long_usage_help = '''Usage:  cid_generator generate_both 
+commands['/cid_generator/generate_both'].long_usage_help = '''Generate both GUI and CLI.
+
+Usage:  cid_generator generate_both 
 
 Parameters:
   -h, --help  Shows a shorter help message. For this help message type:
@@ -147,38 +163,48 @@ Parameters:
               --all.'''
 
 # /cid_generator usage_help
-commands['/cid_generator'].usage_help = '''Usage:  cid_generator <CID_FILE> <ROOT_COMMAND> <DEST_PATH> <sub_command>
+commands['/cid_generator'].usage_help = '''Generate a graphical and/or command line interface from a CID script.
+
+Usage:  cid_generator <CID_FILE> <ROOT_COMMAND> <DEST_PATH> <sub_command>
 
 Parameters:
-  <DEST_PATH>     Data type: File.
-  <ROOT_COMMAND>  Data type: String.
-  <CID_FILE>      Data type: File.
+  <ROOT_COMMAND>  The name of the entry point command of the interface.
+  <CID_FILE>      The CID script file that contains a description of the command
+                  interface to generate. (*.cid)
+  <DEST_PATH>     The destination directory where to generate the interface.
   -h, --help      Shows this help message. For more detailed help type:
                   cid_generator -h -a.
 
 Sub Commands:
-  generate_cli   
-  generate_gui   
-  generate_both  
+  generate_cli   Generate a command line parser based on the provided description.
+  generate_gui   Generate a graphical user interface based on the provided
+                 description.
+  generate_both  Generate both GUI and CLI.
 
 For help about a speciffic sub command type: cid_generator <sub_command> -h.'''
 
 # /cid_generator long_usage_help
-commands['/cid_generator'].long_usage_help = '''Usage:  cid_generator <CID_FILE> <ROOT_COMMAND> <DEST_PATH> <sub_command>
+commands['/cid_generator'].long_usage_help = '''Generate a graphical and/or command line interface from a CID script.
+
+Usage:  cid_generator <CID_FILE> <ROOT_COMMAND> <DEST_PATH> <sub_command>
 
 Parameters:
-  <DEST_PATH>     Data type: File.
-  <ROOT_COMMAND>  Data type: String.
-  <CID_FILE>      Data type: File.
+  <ROOT_COMMAND>  The name of the entry point command of the interface.
+  <CID_FILE>      The CID script file that contains a description of the command
+                  interface to generate. (*.cid)
+  <DEST_PATH>     The destination directory where to generate the interface.
   -h, --help      Shows a shorter help message. For this help message type:
                   cid_generator -h -a. All detailed help parameters: -a, --all.
 
 Sub Commands:
-  generate_cli   
-  generate_gui   
-  generate_both  
+  generate_cli   Generate a command line parser based on the provided description.
+  generate_gui   Generate a graphical user interface based on the provided
+                 description.
+  generate_both  Generate both GUI and CLI.
 
-For help about a speciffic sub command type: cid_generator <sub_command> -h.'''
+For help about a speciffic sub command type: cid_generator <sub_command> -h.
+
+CID (Command Interface Description) is a language for describing command interfaces (such as this one), that can be used to generate graphical or command line interfaces. For more information see hhttps://github.com/zeljko-bal.'''
 
 # -------------------- ARGUMENT PARSING FUNCTIONS --------------------
 

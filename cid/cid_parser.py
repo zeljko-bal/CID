@@ -91,7 +91,10 @@ def process_command(command):
     elif command.usage:
         command.usages = [command.usage]
         del command.usage
-
+        
+    command.description = ' '.join(command.description.split()) # reduce excess white space
+    command.help = ' '.join(command.help.split()) # reduce excess white space
+    
     # defaults --------------
 
     if not command.title:
@@ -203,7 +206,12 @@ def process_parameter(parameter):
     if not parameter.multiplicity == 1 and parameter.type == "Bool":
         raise Exception("Multiplicity for Bool type parameters must be 1: {param}.".format(param=parameter.name))
 
+    # help
+    parameter.help = ' '.join(parameter.help.split()) # reduce excess white space
+        
     # description
+    parameter.description = ' '.join(parameter.description.split()) # reduce excess white space
+    
     if not parameter.description:
         parameter.description = '{default_desc}'
 

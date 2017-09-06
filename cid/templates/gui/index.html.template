@@ -223,10 +223,10 @@
 	<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
 		<i class="material-icons left">{% if element|has_directory_constraint %}folder{% else %}insert_drive_file{% endif %}</i> <!-- folder ili file ikona po ogranicenju -->
 		<span>{{multi_param_title(element, i)}}</span>
-		<input type="file"{% if element|has_directory_constraint %} webkitdirectory{% endif %}/>
+		<input type="file"{% if element|has_directory_constraint %} webkitdirectory{% endif %} {% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% endif %}/>
 	</div>
 	<div class="file-path-wrapper">
-		<input id="{{multi_param_id(element, i)}}" class="file-path validate" type="text"/>
+		<input id="{{multi_param_id(element, i)}}" class="file-path validate" type="text"{% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% endif %}/>
 		<label for="{{multi_param_id(element, i)}}"><div style='visibility: hidden'>css layouting hack</div></label>
 	</div>
 {%- elif element.type == 'Choice' %}
@@ -335,18 +335,23 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 {%- endif %}
 {%- endmacro -%}
 
-{%- macro usage_model(usage) %}new ParameterGroup([
-	{%- for element in usage.elements %}
+{%- macro usage_model(usage) %} new ParameterGroup(
+	{%- if usage.elements or usage.has_subcommand %}[
+		{%- for element in usage.elements %}
 {{ cli_element(element)|tab_indent }},
-	{%- endfor %}
-	{%- if usage.has_subcommand %}
+		{%- endfor %}
+		{%- if usage.has_subcommand %}
 	new SubCommand(),
-	{%- endif %}
-])
+		{%- endif %}
+]
+	{%- else -%}
+	[]
+	{%- endif -%}
+)
 {%- endmacro -%}
 
 {%- macro usages_model(usages) %}
-{%- if usages|length > 1 %}new OrGroup([
+{%- if usages|length > 1 %} new OrGroup([
 	{%- for usage in usages %}
 {{ usage_model(usage)|tab_indent }},
 	{%- endfor %}
@@ -523,13 +528,13 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 		const command_models = 
 		{
 			{%- for command in commands %}
-			'{{command.id}}':new CommandModel('{{command.cli_command}}',
+			'{{command.id}}': new CommandModel('{{command.cli_command}}',
 			{{- usages_model(command.usages)|tab_indent(3, start_from=2) }}
 			{%- if command.gui.elements %},
 			[
 				{{- gui_structure_js(command.gui)|tab_indent(3) }}
 			]
-			{%- endif %}),
+			{%- else %}, []{% endif %}),
 			{%- endfor %}
 		};
 		

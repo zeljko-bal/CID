@@ -13,19 +13,41 @@
 	</head>
     <body>
 		<div class="container">
+			<div id="_cid_generator_generate_cli_command_help" class="modal">
+				<div class="modal-content">
+					<h5>Generate CLI</h5>
+					<p>The generated command line parser is implemented in python. The parser takes care of parsing cli arguments, basic validation and displaying help messages. When the parser successfully parses the arguments it invokes the supplied callbacks for every parsed command. A placeholder file is generated that initially contains callbacks that simply print the arguments, but you can replace them with your custom logic.</p>
+				</div>
+				<div class="modal-footer">
+					<a href="#!" class=" modal-action modal-close btn-flat">Close</a>
+				</div>
+			</div>
+			<div id="_cid_generator_generate_gui_command_help" class="modal">
+				<div class="modal-content">
+					<h5>Generate GUI</h5>
+					<p>The generated GUI is based on the electron framework and represents a form with input widgets that correspond to command parameters. When executed the GUI invokes the command as a CLI command (it can be the command generated from the same CID script or an external cli programm with compatible interface).</p>
+				</div>
+				<div class="modal-footer">
+					<a href="#!" class=" modal-action modal-close btn-flat">Close</a>
+				</div>
+			</div>
 			<div id="_cid_generator" class="command-panel">
 				<div style="display:flex; align-items:baseline;">
 					<h4 style="flex-grow: 1;">CID Generator</h4>
+					<a href="#_cid_generator_command_help" class="modal-trigger " data-position="bottom" data-delay="700" data-tooltip="CID Generator Help" style="flex-grow: 0;"><i class="material-icons small right" style="position:relative; top:10px;">help</i></a>
 				</div>
 				<hr/>
+				<div class="card-panel white" style="padding-top: 5px; padding-bottom: 5px;">
+					<p>Generate a graphical and/or command line interface from a CID script.</p>
+				</div>
 				<div class="parameter-section">
-					<div class="parameter-wrapper " data-param-id="_cid_generator_cid_file" data-gui-id="_cid_generator_0__cid_generator_cid_file" data-param-type="File" data-position="bottom" data-delay="900" data-tooltip="" style="padding:15px; display:flex; align-items:flex-start;">
+					<div class="parameter-wrapper " data-param-id="_cid_generator_cid_file" data-gui-id="_cid_generator_0__cid_generator_cid_file" data-param-type="File" data-position="bottom" data-delay="900" data-tooltip="The CID script file that contains a description of the command interface to generate. (*.cid)" style="padding:15px; display:flex; align-items:flex-start;">
 						<div style="flex-grow: 1;" class="data-input-wrapper">
 								<div class="input-field file-field" data-input-id="_cid_generator_cid_file">
 									<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
 										<i class="material-icons left">insert_drive_file</i> <!-- folder ili file ikona po ogranicenju -->
 										<span>Command Description</span>
-										<input type="file"/>
+										<input type="file" />
 									</div>
 									<div class="file-path-wrapper">
 										<input id="_cid_generator_cid_file" class="file-path validate" type="text"/>
@@ -33,22 +55,48 @@
 									</div>
 								</div>
 						</div>
+						<!-- More options: description, help -->
+						<div class="more-options-btn" style="position:relative; top:30px;">
+							<a href="#!" class="dropdown-button" data-activates="_cid_generator_cid_file_dropdown_1" data-beloworigin="true" data-alignment="right" data-constrainwidth="false"><i class="material-icons">more_vert</i></a>
+							<ul id="_cid_generator_cid_file_dropdown_1" class='dropdown-content'>
+								<li><a class="desc-btn" data-shows="_cid_generator_cid_file_desc_1" href="#!"><i class="material-icons" style="position:relative; top:6px; padding-right:5px;">info_outline</i>Description</a></li>
+							</ul>
+						</div>
 					</div>
-					<div class="parameter-wrapper " data-param-id="_cid_generator_root_command" data-gui-id="_cid_generator_1__cid_generator_root_command" data-param-type="Str" data-position="bottom" data-delay="900" data-tooltip="" style="padding:15px; display:flex; align-items:flex-start;">
+					<div id="_cid_generator_cid_file_desc_1" class="card-panel teal lighten-1 description-card" style="display:none; position:relative; margin-left:5px; margin-right:5px;">
+						<span class="white-text">
+						The CID script file that contains a description of the command interface to generate. (*.cid)
+						</span>
+						<a href="#!" class="close-desc-button"><i class="material-icons text-white" style="position:absolute; top:3px; right:3px;">close</i></a>
+					</div>
+					<div class="parameter-wrapper " data-param-id="_cid_generator_root_command" data-gui-id="_cid_generator_1__cid_generator_root_command" data-param-type="Str" data-position="bottom" data-delay="900" data-tooltip="The name of the entry point command of the interface." style="padding:15px; display:flex; align-items:flex-start;">
 						<div style="flex-grow: 1;" class="data-input-wrapper">
 								<div class="input-field" data-input-id="_cid_generator_root_command">
 									<input id="_cid_generator_root_command" type="text"/>
 									<label for="_cid_generator_root_command">Root Command</label>
 								</div>
 						</div>
+						<!-- More options: description, help -->
+						<div class="more-options-btn" style="position:relative; top:30px;">
+							<a href="#!" class="dropdown-button" data-activates="_cid_generator_root_command_dropdown_1" data-beloworigin="true" data-alignment="right" data-constrainwidth="false"><i class="material-icons">more_vert</i></a>
+							<ul id="_cid_generator_root_command_dropdown_1" class='dropdown-content'>
+								<li><a class="desc-btn" data-shows="_cid_generator_root_command_desc_1" href="#!"><i class="material-icons" style="position:relative; top:6px; padding-right:5px;">info_outline</i>Description</a></li>
+							</ul>
+						</div>
 					</div>
-					<div class="parameter-wrapper " data-param-id="_cid_generator_dest_path" data-gui-id="_cid_generator_2__cid_generator_dest_path" data-param-type="File" data-position="bottom" data-delay="900" data-tooltip="" style="padding:15px; display:flex; align-items:flex-start;">
+					<div id="_cid_generator_root_command_desc_1" class="card-panel teal lighten-1 description-card" style="display:none; position:relative; margin-left:5px; margin-right:5px;">
+						<span class="white-text">
+						The name of the entry point command of the interface.
+						</span>
+						<a href="#!" class="close-desc-button"><i class="material-icons text-white" style="position:absolute; top:3px; right:3px;">close</i></a>
+					</div>
+					<div class="parameter-wrapper " data-param-id="_cid_generator_dest_path" data-gui-id="_cid_generator_2__cid_generator_dest_path" data-param-type="File" data-position="bottom" data-delay="900" data-tooltip="The destination directory where to generate the interface." style="padding:15px; display:flex; align-items:flex-start;">
 						<div style="flex-grow: 1;" class="data-input-wrapper">
 								<div class="input-field file-field" data-input-id="_cid_generator_dest_path">
 									<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
 										<i class="material-icons left">folder</i> <!-- folder ili file ikona po ogranicenju -->
 										<span>Destination</span>
-										<input type="file" webkitdirectory/>
+										<input type="file" webkitdirectory />
 									</div>
 									<div class="file-path-wrapper">
 										<input id="_cid_generator_dest_path" class="file-path validate" type="text"/>
@@ -56,6 +104,19 @@
 									</div>
 								</div>
 						</div>
+						<!-- More options: description, help -->
+						<div class="more-options-btn" style="position:relative; top:30px;">
+							<a href="#!" class="dropdown-button" data-activates="_cid_generator_dest_path_dropdown_1" data-beloworigin="true" data-alignment="right" data-constrainwidth="false"><i class="material-icons">more_vert</i></a>
+							<ul id="_cid_generator_dest_path_dropdown_1" class='dropdown-content'>
+								<li><a class="desc-btn" data-shows="_cid_generator_dest_path_desc_1" href="#!"><i class="material-icons" style="position:relative; top:6px; padding-right:5px;">info_outline</i>Description</a></li>
+							</ul>
+						</div>
+					</div>
+					<div id="_cid_generator_dest_path_desc_1" class="card-panel teal lighten-1 description-card" style="display:none; position:relative; margin-left:5px; margin-right:5px;">
+						<span class="white-text">
+						The destination directory where to generate the interface.
+						</span>
+						<a href="#!" class="close-desc-button"><i class="material-icons text-white" style="position:absolute; top:3px; right:3px;">close</i></a>
 					</div>
 				</div>
 				<hr/>
@@ -66,9 +127,10 @@
 						</td>
 						<td style="width: 15px;"/>
 						<td>
-							
+							Generate a command line parser based on the provided description.
 						</td>
 						<td>
+							<a href="#_cid_generator_generate_cli_command_help" class="modal-trigger " data-position="bottom" data-delay="700" data-tooltip="Generate CLI Help"><i class="material-icons">help</i></a>
 						</td>
 					</tr>
 					<tr>
@@ -77,9 +139,10 @@
 						</td>
 						<td style="width: 15px;"/>
 						<td>
-							
+							Generate a graphical user interface based on the provided description.
 						</td>
 						<td>
+							<a href="#_cid_generator_generate_gui_command_help" class="modal-trigger " data-position="bottom" data-delay="700" data-tooltip="Generate GUI Help"><i class="material-icons">help</i></a>
 						</td>
 					</tr>
 					<tr>
@@ -88,12 +151,21 @@
 						</td>
 						<td style="width: 15px;"/>
 						<td>
-							
+							Generate both GUI and CLI.
 						</td>
 						<td>
 						</td>
 					</tr>
 				</table>
+			</div>
+			<div id="_cid_generator_command_help" class="modal">
+				<div class="modal-content">
+					<h5>CID Generator</h5>
+					<p>CID (Command Interface Description) is a language for describing command interfaces (such as this one), that can be used to generate graphical or command line interfaces. For more information see hhttps://github.com/zeljko-bal.</p>
+				</div>
+				<div class="modal-footer">
+					<a href="#!" class=" modal-action modal-close btn-flat">Close</a>
+				</div>
 			</div>
 			<div class="card-panel blue-grey darken-1 white-text text-darken-2">
 				<span style="-webkit-user-select: none;">> </span><span id="cli-text">cid_generator</span> <span id="sub-command-cli-text"><span>
