@@ -595,5 +595,5 @@ def parse(script_path):
     ModelProcessor(_gather_gui_sub_elements_visitor).process_model(model)
     ModelProcessor({'Command': expand_options_shortcut}).process_model(model)
     ModelProcessor({'Command': validate_command}).process_model(model)
-
+    
     return model

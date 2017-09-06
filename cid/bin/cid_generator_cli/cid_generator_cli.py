@@ -2,8 +2,9 @@
 from cid_generator_cli_parser import command, CommandInterface, command_method, parse_cli_args, invoke_commands, print_builtin_help, get_cli_args, \
     root_command_name, root_command_id, parameters as parameter_models, commands as command_models
 
-from cid import cli_generator, gui_generator
-    
+from cid.cli import cli_generator
+from cid.gui import gui_generator
+
 
 class Interface(CommandInterface):
     @command_method()

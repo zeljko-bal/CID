@@ -12,8 +12,8 @@ from cid.utils.model_processor import ModelProcessor
 from cid.utils.common import *
 
 
-_cli_templates_path = join(dirname(realpath(__file__)), 'templates', 'cli')
-_cli_framework_path = join(dirname(realpath(__file__)), 'framework', 'cli')
+_cli_templates_path = join(dirname(realpath(__file__)), 'templates')
+_cli_framework_path = join(dirname(realpath(__file__)), 'framework')
 
 
 # ------------------------------- CLI MODEL PROCESSORS -------------------------------
@@ -504,9 +504,3 @@ def generate_cli(cid_file, root_command_name, dest_path):
     render_cli_code(model, root_command_name, cli_app_path)
     render_runner_script(root_command_name, dest_path)
     print("Generated cli successfully.")
-
-
-# ------------------------------- MAIN -------------------------------
-
-if __name__ == '__main__':
-    generate_cli('D:/docs/FAX/master/projekat/cid/cid_generator.cid', 'cid_generator', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args

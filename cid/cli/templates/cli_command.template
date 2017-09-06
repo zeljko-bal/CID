@@ -1,5 +1,5 @@
 
-from {{root_command_name}}_cli_parser import command, parse_cli_args, invoke_commands, print_builtin_help, get_cli_args, \
+from {{root_command_name}}_cli_parser import command, CommandInterface, command_method, parse_cli_args, invoke_commands, print_builtin_help, get_cli_args, \
     root_command_name, root_command_id, parameters as parameter_models, commands as command_models
 
 '''

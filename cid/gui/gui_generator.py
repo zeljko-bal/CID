@@ -8,8 +8,8 @@ from cid.utils.model_processor import ModelProcessor
 from cid.utils.common import *
 
 
-_gui_templates_path = join(dirname(realpath(__file__)), 'templates', 'gui')
-_gui_framework_path = join(dirname(realpath(__file__)), 'framework', 'gui')
+_gui_templates_path = join(dirname(realpath(__file__)), 'templates')
+_gui_framework_path = join(dirname(realpath(__file__)), 'framework')
 
 
 class GuiStructure:
@@ -365,9 +365,3 @@ def generate_gui(cid_file, root_command_name, dest_path):
     render_gui_code(model, root_command_name, dest_path)
     render_runner_script(dest_path, root_command_name)
     print("Generated gui successfully.")
-
-
-# ------------------------------- MAIN -------------------------------
-
-if __name__ == '__main__':
-    generate_gui('D:/docs/FAX/master/projekat/cid/cid_generator.cid', 'cid_generator', 'D:/docs/FAX/master/projekat/dist')  # TODO src path as arg, # TODO root_command_name and dest path as args
