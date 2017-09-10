@@ -1,4 +1,6 @@
-recursive-include cid/framework *
+recursive-include cid/gui/framework *
+recursive-include cid/gui/templates *
+recursive-include cid/cli/framework *
+recursive-include cid/cli/templates *
 recursive-include cid/grammar *
-recursive-include cid/templates *
 recursive-include cid/bin *
