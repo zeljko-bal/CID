@@ -49,23 +49,12 @@ def html_id(id):
 
 # ------------------------------- GUI MODEL PROCESSORS -------------------------------
 
-_supported_widgets_by_type = {
-    'Str': ['text_field', 'password'],
-}
-
 def convert_row_to_grid(row):
     if not element_type(row.parent) == 'GuiGrid':
         idx = row.parent.elements.index(row)
         grid = GuiGrid(row.parent, [row])
         row.parent.elements[idx] = grid
         row.parent = grid
-
-
-def check_parameter_widget(parameter):
-    if parameter.widget:
-        supported_widgets = _supported_widgets_by_type[parameter.type]
-        if parameter.widget not in supported_widgets:
-            raise Exception('parameter.widget unsupported')
 
 
 # -------------------------------
@@ -159,13 +148,6 @@ def parameter_description_defaults(parameter):
     parameter.description = parameter.description.format(default_desc='')
 
 
-def gui_widget_defaults(parameter):
-    parameter_type = element_type(parameter)
-    if parameter_type in _supported_widgets_by_type:
-        supported_widgets = _supported_widgets_by_type[parameter_type]
-        parameter.widget = supported_widgets[0]  # take first
-
-
 # -------------------------------
 
 def gui_section_group_defaults(section_group):
@@ -188,7 +170,7 @@ def check_gui_grid(grid):
     row_length = None
     for row in grid.elements:
         if row_length and row_length != len(row.elements):
-            raise Exception("Inconsistent row length in gui grid for command: {}".format('TODO'))
+            raise Exception("Inconsistent row length in gui grid for command: '{}'".format(parent_command(grid).id))
         else:
             row_length = len(row.elements)
 
@@ -201,13 +183,13 @@ def check_gui_section_group(section_group):
     for section in section_group.elements:
         if section.expanded:
             if found_expanded:
-                raise Exception("Two expanded sections in gui section group for command: {}".format('TODO'))
+                raise Exception("Two expanded sections in gui section group for command: '{}'".format(parent_command(section_group).id))
             elif section.expanded:
                 found_expanded = True
 
     # check for optional sections
     if any([section.optional for section in section_group.elements]):
-        raise Exception("Optional section in section group.")
+        raise Exception("Optional section in section group for command: '{}'.".format(parent_command(section_group).id))
 
 
 # ------------------------------- JINJA FILTERS -------------------------------
@@ -270,10 +252,10 @@ def has_directory_constraint_filter(param):
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
 def process_model(model):
-    ModelProcessor({'GuiGridRow': convert_row_to_grid});
+    ModelProcessor({'GuiGridRow': convert_row_to_grid})
     ModelProcessor([{'GuiSectionGroup': gui_section_group_defaults, 'Command': gui_structure_defaults, 'GuiGridRow': add_gui_grid_row_dimensions,
-                     'Parameter': [parameter_description_defaults, gui_widget_defaults]}, _convert_id_visitor]).process_model(model)
-    ModelProcessor({'Parameter': check_parameter_widget, 'GuiGrid': check_gui_grid, 'GuiSectionGroup': check_gui_section_group}).process_model(model)
+                     'Parameter': parameter_description_defaults}, _convert_id_visitor]).process_model(model)
+    ModelProcessor({'GuiGrid': check_gui_grid, 'GuiSectionGroup': check_gui_section_group}).process_model(model)
 
 
 def render_gui_code(model, root_command_name, dest_path):
@@ -365,3 +347,6 @@ def generate_gui(cid_file, root_command_name, dest_path):
     render_gui_code(model, root_command_name, dest_path)
     render_runner_script(dest_path, root_command_name)
     print("Generated gui successfully.")
+
+if __name__ == '__main__':
+    generate_gui("D:\docs\FAX\master\projekat\cid\example1.cid", 'command1', "D:\docs\FAX\master\projekat\dist")

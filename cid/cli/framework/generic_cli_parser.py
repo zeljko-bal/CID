@@ -8,6 +8,8 @@ from inspect import getfullargspec
 from types import MethodType, BuiltinMethodType
 from js2py import eval_js
 
+from js_date import js_date
+
 
 class CommandParserModel:
     def __init__(self, id, name, cli_command, parameter_models=[], usage_model=None, usage_help='', long_usage_help='', sub_commands=[],
@@ -651,7 +653,8 @@ def convert_data(data, model):
         elif model.type == "Date":
             if not data:
                 return datetime.now()
-            return datetime.strptime(data, model.date_format)
+            formated_date = js_date.Date.parseExact(data, model.date_format).toString('dd.MM.yyyy')
+            return datetime.strptime(formated_date, "%d.%m.%Y")
         elif model.type == "Bool":
             return {"true": True, "false": False}[data.lower()]
     else:

@@ -55,8 +55,7 @@ class ParameterProcessor:
                 repr_pattern = max(str_patterns, key=lambda p: len(p.prefix))  # longest prefix
                 parameter.usage_repr = cli_pattern_repr(repr_pattern)
         else:
-            parameter.usage_repr = "<{name}>{mult}".format(name=parameter.name.upper(),
-                                                           mult='...' if parameter.multiplicity == '*' else '')
+            parameter.usage_repr = "<{name}>{mult}".format(name=parameter.name.upper(), mult='...' if parameter.multiplicity == '*' else '')
 
     def defaults(self, parameter):
         if '{default_desc}' in parameter.description:
@@ -93,11 +92,11 @@ class ParameterProcessor:
             # check for duplicate prefixes
             for prefix in parameter.prefixes:
                 if prefix in self.all_prefixes:
-                    raise Exception('duplicate prefixes')
+                    raise Exception("Found duplicate cli prefixes for parameter: '{}'.".format(parameter.id))
                 self.all_prefixes.append(prefix)
         else:
             if parameter.type == 'Bool':
-                raise Exception("Positional parameter of type Bool: {}.".format(parameter.id))
+                raise Exception("Found positional parameter of type 'Bool': '{}'.".format(parameter.id))
 
 
 def cli_pattern_repr(pattern):
@@ -109,7 +108,7 @@ def cli_pattern_repr(pattern):
                 type_str = ' '.join(pattern.vars)
             else:
                 type_str = pattern.parent.type
-            if pattern.count:
+            if pattern.count and not pattern.vars:
                 type_str = ' '.join([type_str] * pattern.count)
             if pattern.count_many:
                 if pattern.separator:
@@ -118,8 +117,8 @@ def cli_pattern_repr(pattern):
                     count_repr = '...'
             else:
                 count_repr = ''
-            return '{pref}{space}<{type}{count}>'.format(pref=pattern.prefix, space=pattern.white_space * ' ',
-                                                         type=type_str.upper(), count=count_repr)
+            return '{pref}{space}<{type}{count}>'.format(
+                pref=pattern.prefix, space=pattern.white_space * ' ', type=type_str.upper(), count=count_repr)
     else:
         if pattern.positive and pattern.negative:
             return pattern.positive, pattern.negative
@@ -169,7 +168,7 @@ def add_builtin_help(command, parent_elements):
         command.long_help_params = ['-a', '--all']
 
     if not set(command.help_params).isdisjoint(set(command.long_help_params)):
-        raise Exception("Found same parameters in help_params and long_help_params for command: {}".format(command.id))
+        raise Exception("Found same parameters in help_params and long_help_params for command: '{}'".format(command.id))
 
     resolve_builtin_help_params(command)
 
@@ -201,12 +200,10 @@ def generate_usage_help(command, parents, long=False):
     # this command followed by all the parent commands
     command_str = ' '.join([c.cli_command for c in parents + [command]])
     # a set of built in help parameters common to all subcommands
-    common_subcommand_help_params = reduce(lambda x, y: x.intersection(y), [set(c.help_params) for c in
-                                                                            command.sub_commands]) if command.sub_commands else set()
+    common_subcommand_help_params = reduce(lambda x, y: x.intersection(y), [set(c.help_params) for c in command.sub_commands]) if command.sub_commands else set()
     common_subcommand_help = common_subcommand_help_params.pop() if common_subcommand_help_params else None
 
-    return _usage_help_template.render(command=command, parents=parents, long=long, command_str=command_str,
-                                       common_subcommand_help=common_subcommand_help)
+    return _usage_help_template.render(command=command, parents=parents, long=long, command_str=command_str, common_subcommand_help=common_subcommand_help)
 
 
 def generate_parameters_usage_help(command, long, command_str):
@@ -323,10 +320,8 @@ def validate_command(command):
     for usage in command.usages:
         rightmost = rightmost_positional_elements(usage)
         for element in usage.sub_elements:
-            if element_type(
-                    element) == "Parameter" and not element.nonpositional and element.multiplicity == '*' and element not in rightmost:
-                raise Exception(
-                    "A positional parameter with multiplicity '*' must be the rightmost one: {}.".format(element.name))
+            if element_type(element) == "Parameter" and not element.nonpositional and element.multiplicity == '*' and element not in rightmost:
+                raise Exception("A positional parameter with multiplicity '*' must be the rightmost one: '{}'.".format(element.name))
 
 
 def rightmost_positional_elements(element):
@@ -362,9 +357,8 @@ def parameter_model_filter(parameter):
         positives_str = ", positives={prefixes}".format(prefixes=print_list(positives)) if positives else ''
         negatives_str = ", negatives={prefixes}".format(prefixes=print_list(negatives)) if negatives else ''
 
-        return "BooleanNonpositional('{name}'{positives}{negatives})".format(name=parameter.name,
-                                                                             positives=positives_str,
-                                                                             negatives=negatives_str)
+        return "BooleanNonpositional('{name}'{positives}{negatives})".format(
+            name=parameter.name, positives=positives_str, negatives=negatives_str)
     else:
         ret = []
         classified = defaultdict(lambda: defaultdict(set))
@@ -392,29 +386,19 @@ def parameter_model_filter(parameter):
         if classified['MultiArgNonpositional']:
             for count_str, patterns in classified['MultiArgNonpositional'].items():
                 prefixes = [p.prefix for p in patterns]
-                ret.append("MultiArgNonpositional('{name}', {prefixes}{count_str})".format(name=parameter.name,
-                                                                                           prefixes=print_list(
-                                                                                               prefixes),
-                                                                                           count_str=count_str))
+                ret.append("MultiArgNonpositional('{name}', {prefixes}{count_str})".format(name=parameter.name, prefixes=print_list(prefixes), count_str=count_str))
         if classified['SeparatedNonpositional']:
             for separator_str, patterns in classified['SeparatedNonpositional'].items():
                 prefixes = [p.prefix for p in patterns]
-                ret.append("SeparatedNonpositional('{name}', {prefixes}{separator_str})".format(name=parameter.name,
-                                                                                                prefixes=print_list(
-                                                                                                    prefixes),
-                                                                                                separator_str=separator_str))
+                ret.append("SeparatedNonpositional('{name}', {prefixes}{separator_str})".format(name=parameter.name, prefixes=print_list(prefixes), separator_str=separator_str))
         if classified['CounterNonpositional']:
             for count_char, patterns in classified['CounterNonpositional'].items():
                 prefixes = [p.prefix for p in patterns]
-                ret.append("CounterNonpositional('{name}', {prefixes}, '{count_char}')".format(name=parameter.name,
-                                                                                               prefixes=print_list(
-                                                                                                   prefixes),
-                                                                                               count_char=count_char))
+                ret.append("CounterNonpositional('{name}', {prefixes}, '{count_char}')".format(name=parameter.name, prefixes=print_list(prefixes), count_char=count_char))
         if classified['BasicNonpositional']:
             for _, patterns in classified['BasicNonpositional'].items():
                 prefixes = [p.prefix for p in patterns]
-                ret.append("BasicNonpositional('{name}', {prefixes})".format(name=parameter.name,
-                                                                             prefixes=print_list(prefixes)))
+                ret.append("BasicNonpositional('{name}', {prefixes})".format(name=parameter.name, prefixes=print_list(prefixes)))
         return ', '.join(ret)
 
 
@@ -475,6 +459,7 @@ def copy_framework(cli_app_path):
         makedirs(cli_app_path)
     
     copy(join(_cli_framework_path, "generic_cli_parser.py"), cli_app_path)
+    copy(join(_cli_framework_path, "js_date.py"), cli_app_path)
     
 
 def render_runner_script(root_command_name, dest_path):

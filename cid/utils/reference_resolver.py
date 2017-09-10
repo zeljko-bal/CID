@@ -79,6 +79,8 @@ class ReferenceResolver:
         if element_type(instance.parent) == 'Script' or instance.parent is parent_command(reference):
             # replace the reference with the actual instance
             reference_replacer(reference, instance)
+        else:
+            raise Exception("Unresolved local reference: {}".format(reference.local))
 
     @staticmethod
     def replace_parameter_reference(parameter_reference, instance):

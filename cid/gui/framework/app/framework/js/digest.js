@@ -30,6 +30,16 @@ function digest()
 			$("[data-param-id='" + param.model.id + "']")
 				.addClass('required-param');
 		}
+		
+		// posibly required
+		$('.parameter-wrapper')
+			.removeClass('possibly-required-param');
+		
+		for(const param of command_result.context.possibly_required)
+		{
+			$("[data-param-id='" + param.model.id + "']")
+				.addClass('possibly-required-param');
+		}
 	}
 	
 	const cli_string = get_cli_string(command_results);

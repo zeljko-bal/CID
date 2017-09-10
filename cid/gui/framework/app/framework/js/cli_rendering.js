@@ -92,6 +92,7 @@ function get_gui_structure_parameter_values(gui_structure)
 		switch(element.constructor.name)
 		{
 			case 'GuiTabs':
+			case 'GuiTab':
 			{
 				let new_vals = get_gui_structure_parameter_values(element.elements);
 				accumulate_values(new_vals);
@@ -255,7 +256,14 @@ function get_input_field_value(input_field, param_model)
 			
 			if(param_model.type == 'Date' && param_model.date_format)
 			{
-				value = new Date(value).toString(param_model.date_format);
+				if(value)
+				{
+					value = new Date(value).toString(param_model.date_format);
+				}
+				else
+				{
+					value = null;
+				}
 			}
 			
 			return value;

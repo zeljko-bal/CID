@@ -1,8 +1,10 @@
 @ECHO OFF
 setlocal EnableDelayedExpansion
+
 :: for all output lines from the gui app
-FOR /F "usebackq delims==" %%G IN (`electron {{gui_app_path}}`) DO (
+FOR /F "tokens=* usebackq delims==" %%G IN (`electron %~dp0\{{gui_app_path}}`) DO (
 	SET _line=%%G
+	
 	:: if the line starts with "__EXECUTE_COMMAND__:"
 	IF "!_line:~0,20!"=="__EXECUTE_COMMAND__:" (
 		:: echo the command and then call it

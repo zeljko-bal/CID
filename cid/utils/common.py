@@ -35,7 +35,11 @@ def get_cli_pattern_count(pattern):
 def element_id(element_name, parents=[]):
     return '/' + '/'.join(parents + [element_name])
 
-
+    
+def is_iterable(data):
+    return hasattr(data, '__iter__') and not isinstance(data, str)
+    
+    
 def tab_indent_filter(text, level=1, start_from=1):
     return '\n'.join([(level * '\t') + line if idx + 1 >= start_from and line != '' else line for idx, line in enumerate(text.split('\n'))])
 

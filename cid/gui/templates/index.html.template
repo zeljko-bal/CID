@@ -74,12 +74,12 @@
 {%- endif -%}
 {%- endmacro -%}
 
-{# <!-- GUI GRID ROW --> TODO merge with gui_element [?] #}
+{# <!-- GUI GRID ROW --> #}
 {%- macro gui_grid_row(row) %}
 <tr class="grid-row-wrapper">
 {%- for cell in row.elements if cell|element_type in ['Parameter', 'EmptyCell'] %}
 	{%- set dim = row.dimensions[loop.index-1] %}
-	<td {%- if dim.colspan and dim.colspan != 1 %} colspan="{{dim.colspan}}"{% endif %} style="min-width: {% if cell|element_type == 'Parameter' and cell.type == 'Bool' %}1{% else %}{{dim.width}}{% endif %}%;">
+	<td {%- if dim.colspan and dim.colspan != 1 %} colspan="{{dim.colspan}}"{% endif %} style="width: {% if cell|element_type == 'Parameter' and cell.type == 'Bool' %}1{% else %}{{dim.width}}{% endif %}%;">
 	{%- if cell|element_type == 'Parameter' %}
 		{{- gui_parameter(cell, row, dim.colspan, dim.width, inline_description=False)|tab_indent() }}
 	{%- endif %}
@@ -217,16 +217,16 @@
 {%- set list_item = True if i != None else False %}
 <div class="input-field {%- if element.type == 'Num' %} number-input-wrapper {%- elif element.type == 'File' %} file-field{% endif %}" data-input-id="{{multi_param_id(element, i)}}">
 {%- if element.type in ['Str', 'Num', 'Date'] %}
-	<input id="{{multi_param_id(element, i)}}" type="{% if element.type == 'Str' %}{% if element.widget == 'password' %}password{% else %}text{% endif %}{% elif element.type == 'Num' %}number{% elif element.type == 'Date' %}date{% endif %}"{% if element.type == 'Date' %} class="datepicker"{% endif %}{% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% elif element.type == 'Str' and element.empty_str_allowed %} disabled{% endif %}/>
+	<input id="{{multi_param_id(element, i)}}" type="{% if element.type == 'Str' %}text{% elif element.type == 'Num' %}number{% elif element.type == 'Date' %}date{% endif %}"{% if element.type == 'Date' %} class="datepicker"{% endif %}{% if element.default != None %} value="{% if list_item and count_n %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% elif element.type == 'Str' and element.empty_str_allowed %} disabled{% endif %}/>
 	<label for="{{multi_param_id(element, i)}}">{{multi_param_title(element, i)}}</label>
 {%- elif element.type == 'File' %}
 	<div class="btn" style="padding-left:15px; padding-right:15px; text-transform:none;">
 		<i class="material-icons left">{% if element|has_directory_constraint %}folder{% else %}insert_drive_file{% endif %}</i> <!-- folder ili file ikona po ogranicenju -->
 		<span>{{multi_param_title(element, i)}}</span>
-		<input type="file"{% if element|has_directory_constraint %} webkitdirectory{% endif %} {% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% endif %}/>
+		<input type="file"{% if element|has_directory_constraint %} webkitdirectory{% endif %} {% if element.default != None %} value="{% if list_item and count_n %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% endif %}/>
 	</div>
 	<div class="file-path-wrapper">
-		<input id="{{multi_param_id(element, i)}}" class="file-path validate" type="text"{% if element.default != None %} value="{% if list_item %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% endif %}/>
+		<input id="{{multi_param_id(element, i)}}" class="file-path validate" type="text"{% if element.default != None %} value="{% if list_item and count_n %}{{element.default[i]}}{% else %}{{element.default}}{% endif %}"{% endif %}/>
 		<label for="{{multi_param_id(element, i)}}"><div style='visibility: hidden'>css layouting hack</div></label>
 	</div>
 {%- elif element.type == 'Choice' %}

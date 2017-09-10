@@ -29,4 +29,3 @@ class Interface(CommandInterface):
 
 if __name__ == '__main__':
     invoke_commands(Interface().get_callbacks())
-    

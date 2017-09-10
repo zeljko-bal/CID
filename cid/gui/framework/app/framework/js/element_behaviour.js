@@ -12,6 +12,8 @@ $('select').material_select();
 
 $('.modal-trigger').leanModal();
 
+$('ul.tabs').tabs();
+
 // ------------------- INPUT LIST TITLES -------------------
 
 function replace_titles(list_items, param_type)
@@ -84,7 +86,7 @@ function is_section_active(section)
 	return $('[data-gui-id='+section.gui_id+'] > .collapsible-header').hasClass('active');
 }
 
-// ------------------- COMMAND PANELS -------------------
+// ------------------- COMMANDS -------------------
 
 function toggle_command_panel(event)
 {
@@ -118,6 +120,8 @@ function toggle_command_panel(event)
 			current_commands.pop();
 		}
 	}
+	
+	window.dispatchEvent(new Event('resize'));
 	
 	digest();
 }

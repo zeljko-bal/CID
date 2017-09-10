@@ -7,14 +7,16 @@ Bool outer_option1:
 
 Cmd command1 "Command1":
 	description: "Example description of command1."
-	help: "Example help for command1."
+	help: "Example help for command1. Lorem Ipsum is simply dummy text of the printing and typesetting industry. 
+		Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, 
+		when an unknown printer took a galley of type and scrambled it to make a type specimen book."
 	parameters:
 	{
 		/exo1
 		/example2/external_option2
 		outer_option1
 		
-		Num counter_par:
+		Num counter_par "Counter":
 			cli: "-{count:v}"
             constraints:
 				min: 4 "minimum is 4"
@@ -26,53 +28,53 @@ Cmd command1 "Command1":
 					>>
 					"value must be even number"
 			
-		Num num_par1:
+		Num num_par1 "Number Example":
 			cli: "--num_par1={}"
 		
-		Str str_par1 "String param 1":
-			description: "Custom description. {default_desc} And so on.."
+		Str str_par1 "String parameter 1":
+			description: "Custom description. Default description: ({default_desc}) And so on.."
 			help: "Help about str_par1."
-			default: "default val"
+			default: "default value"
 			empty_str: Allowed
 			cli: "--par1 {}", "-p1={}"
 		
-		Str str_par_default_None:
-			default: None
+		Str str_par_default_None "Default None":
+			default: None # trebalo bi da je po defaultu default none??
 			cli: "--def-none={}"
-			widget: password
 		
-		Date date_par:
+		Date date_par "Date":
 			cli: "--date={}"
-			date_format: "dd.mm.yyyy"
+			date_format: "dd.MM.yyyy"
 			
-		File file_par:
+		File file_par "File":
 			cli: "--file-par={*}"
 			
-		Choice choice_par:
+		Choice choice_par "Choice":
 			cli: "--choice-par={*|,}"
 			choices: "choice1", "choice2"
 		
-		Num tuple_par:
+		Num tuple_par "Tuple 1":
 			cli: "--tuple-par {'x', 'y'}", "-tp {2}"
 			constraints:
 				min: 4 "minimum is 4, actual values are {value.x} and {value.y}"
 				max: 8 
 			
-		Str tuple_par2:
+		Str tuple_par2 "Tuple 2":
 			cli: "--tuple-par2 {'xx', 'yy'}", "-tp2 {2}"
 			empty_str: Allowed
 			multiplicity: *
 			
-		Str many_par:
+		Str many_par "Many":
 			cli: "--many-par {*}"
 			empty_str: Allowed
 			multiplicity: *
-			default: "True"
+			default: "default Many"
 			
-		Str separated_par:
+		Str separated_par "Separated":
 			cli: "--sep-par {*|,}"
 			
 		Str positional1
+		
 		Str positional_many:
 			multiplicity: *
 	}
@@ -88,29 +90,74 @@ Cmd command1 "Command1":
 		- [/exo1] [/example2/external_option2] num_par1 positional1 -- positional_many
 		- str_par1 outer_option1 {sub_command}
 		- [str_par_default_None date_par] counter_par file_par|choice_par (tuple_par tuple_par2 many_par)|separated_par
-	#gui:
-	#	grid:
-	#	{
-	#		[/exo1                     |outer_option1  |str_par_default_None |file_par       ]
-	#		[/example2/external_option2|   str_par1    |>>>>>>>>>>>>>>>>>>>>>|positional_many]
-	#	}
 	commands:
 	{
 		Cmd sub1 "Sub command 1":
 			description: "Sub Command 1, Sub Command 1, does whatever sub command 1 does."
-			help: "asdsdvr revbrtb thbtrgr sergsreg esrgsergr gsergserg erg"
+			help: "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
 			parameters:
 			{
 				Bool inner_opt:
 					cli: "--inner-opt"
 			}
-		Cmd sub2:
+		Cmd sub2 "Gui Structure Example":
 			parameters:
 			{
-				outer_option1
+				Str str1
+				Str str2
+				Str str3
+				Num num4
+				File file5
+				Str str6
+				Choice choice7:
+					choices: "choice 1", "choice 2"
+				Bool bool8
+				Str str9
+				Str str10
+				Str str11
+				Str str12
+				Bool bool13
+				Bool bool14
+				Str str15
+				Str str16
+				Str str17
+				Str str18
+				Str str19
 			}
-			usage: 
-				- outer_option1
+			gui:
+				tabs:
+					"Tab 1":
+					{
+						grid:
+						{
+							[str1 |str2   |>>>>>]
+							[_____|str3   |num4 ]
+							[file5|>>>>>>>|>>>>>]
+							[str6 |choice7|bool8]
+							[str9 |_______|str10]
+						}
+					}
+					"Tab 2":
+					{
+						str11
+						str12
+						[bool13|bool14|str15]
+						[str16|str17]
+					}
+					"Tab 3":
+					{
+						sections:
+						{
+							section "Section 1":
+							{
+								str18
+							}
+							section "Section 2":
+							{
+								str19
+							}
+						}
+					}
 		Cmd sub3:
 			description: "Description for command 3"
 			parameters:
@@ -120,6 +167,6 @@ Cmd command1 "Command1":
 					cli: "--help"
 			}
 			cli_command: "subcommand3"
-		Cmd sub4
+		Cmd sub4 "Parameterless Command 4"
 	}
 	

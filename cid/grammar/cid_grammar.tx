@@ -57,7 +57,6 @@ Parameter:
       ('default:' (default+=STRING[',']|default_is_none?='None'))?
       ('empty_str:' (empty_str_allowed?='Allowed'|empty_str_disallowed?='Disallowed'))?
       ('multiplicity:' multiplicity=ParameterMultiplicity)?
-      ('widget:' widget=GuiWidget)?
       ('choices:' choices+=ChoiceParameterValue[','])?
       ('date_format:' date_format=STRING)?
       ('cli:' cli=ParameterCliValue (',' cli_aliases+=ParameterCliPattern[','])?)?
@@ -76,10 +75,6 @@ EmptyStrAllowed:
 
 ParameterMultiplicity:
   INT|'*'
-;
-
-GuiWidget:
-  "password"|"text_field"
 ;
 
 ChoiceParameterValue:

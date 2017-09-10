@@ -175,4 +175,10 @@ div.material-tooltip
 	content:'*';
 	color: #e32;
 }
+
+.possibly-required-param:after 
+{ 
+	content:'*';
+	color: #21ecff;
+}
 	

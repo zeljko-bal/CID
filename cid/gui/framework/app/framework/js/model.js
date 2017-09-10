@@ -39,6 +39,12 @@ class GuiGrid extends GuiStructure
 class GuiGridRow extends GuiStructure
 {}
 
+class EmptyCell
+{}
+
+class CellSpan
+{}
+
 class GuiParameter
 {
 	constructor(gui_id, model)
