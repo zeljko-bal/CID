@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(name='cid',
     version='0.0.1',
     description='Command Interface Description Language',
-    url='hhttps://github.com/zeljko-bal',
+    url='https://github.com/zeljko-bal/CID',
     author='Zeljko Bal',
     author_email='zeljko.bal@gmail.com',
     license='MIT',

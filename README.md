@@ -20,7 +20,7 @@ These need to be installed first:
 - Electron v1.3.3 (https://electron.atom.io/) (must be in PATH)
 
 ### Install:
-Then simply install the project using pip.
+Simply install the project using pip.
 ```cmd
 > cd <cid_root_directory>
 > pip install .
