@@ -10,6 +10,13 @@ The GUI generator will generate an app based on the [Electron](https://electron.
 
 *The generators currently only support windows, but as the underlying frameworks and languages that were used are cross platform, the support for other operating systems can be added with just a bit of shell scripting.
 
+## Technologies used:
+
+- The CID parser and generators, as well as the generic cli arguments parser, are implemented in the Python programming language. 
+- The parser module uses [textX](https://github.com/igordejanovic/textX) library to parse the .cid scripts. 
+- The generators use [Jinja2](http://jinja.pocoo.org/) template renderer to generate the interfaces. 
+- [Electron](https://electron.atom.io/) framework is used to render the html/javascript gui as desktop applications.
+
 ## Quick Start:
 
 You can try generating interfaces based on the provided example scripts. The generator interfaces themselves have been generated using the CID generator.
