@@ -1,7 +1,7 @@
 from os.path import realpath, join, dirname
 from textx.metamodel import metamodel_from_file
 
-from cid.utils.model_processor import ModelProcessor
+from cid.utils.cid_model_processor import CidModelProcessor
 from cid.utils.reference_resolver import ReferenceResolver, ImportedReferenceDefinition
 from cid.utils.common import *
 
@@ -24,7 +24,7 @@ class ParameterCliValue:
     def __init__(self, cli_pattern):
         self.cli_pattern = cli_pattern
         
- 
+
 class BoolWithPositivePattern:
     def __init__(self, positive, negative=None):
         self.positive = positive
@@ -575,7 +575,7 @@ def parse(script_path):
     # EXTRACT DATA ---------------------
 
     model_extractor = ElementExtractor()
-    ModelProcessor(model_extractor.visitor).process_model(model)
+    CidModelProcessor(model_extractor.visitor).process_model(model)
 
     all_defined_commands = model_extractor.all_commands
     all_defined_parameters = model_extractor.all_parameters
@@ -592,17 +592,17 @@ def parse(script_path):
     reference_resolver = ReferenceResolver(parameter_instances, command_instances, import_definitions)
     reference_resolver_visitor = {'ParameterReference': reference_resolver.resolve_parameter_reference, 'CommandReference': reference_resolver.resolve_command_reference}
 
-    ModelProcessor(reference_resolver_visitor).process_model(model)
+    CidModelProcessor(reference_resolver_visitor).process_model(model)
 
     # SECOND PASS ---------------------
 
-    ModelProcessor({'CliSeparator': process_cli_separator, 'Command': add_cli_separator_attr}).process_model(model)
-    ModelProcessor({'Command': add_id, 'Parameter': add_id}).process_model(model)
-    ModelProcessor({'Command': set_usage_defaults}).process_model(model)
-    ModelProcessor(_constraint_message_defaults_visitor).process_model(model)
-    ModelProcessor(_gather_usage_sub_elements_visitor).process_model(model)
-    ModelProcessor(_gather_gui_sub_elements_visitor).process_model(model)
-    ModelProcessor({'Command': expand_options_shortcut}).process_model(model)
-    ModelProcessor({'Command': validate_command}).process_model(model)
+    CidModelProcessor({'CliSeparator': process_cli_separator, 'Command': add_cli_separator_attr}).process_model(model)
+    CidModelProcessor({'Command': add_id, 'Parameter': add_id}).process_model(model)
+    CidModelProcessor({'Command': set_usage_defaults}).process_model(model)
+    CidModelProcessor(_constraint_message_defaults_visitor).process_model(model)
+    CidModelProcessor(_gather_usage_sub_elements_visitor).process_model(model)
+    CidModelProcessor(_gather_gui_sub_elements_visitor).process_model(model)
+    CidModelProcessor({'Command': expand_options_shortcut}).process_model(model)
+    CidModelProcessor({'Command': validate_command}).process_model(model)
     
     return model

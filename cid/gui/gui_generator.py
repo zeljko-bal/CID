@@ -1,10 +1,10 @@
-from os.path import join, split, dirname, realpath, isdir
-from shutil import copy, rmtree, copytree
+from os.path import join, dirname, realpath, isdir
+from shutil import rmtree, copytree
 from collections import defaultdict, namedtuple
 from jinja2 import Environment, FileSystemLoader
 
 from cid.cid_parser import parse
-from cid.utils.model_processor import ModelProcessor
+from cid.utils.cid_model_processor import CidModelProcessor
 from cid.utils.common import *
 
 
@@ -109,7 +109,7 @@ _add_default_gui_structure_visitor = {'CliStructure': usage_group_gui_structure,
 def gui_structure_defaults(command):
     if not command.gui:
         for usage in command.usages:
-            ModelProcessor(_add_default_gui_structure_visitor).process_cli_group(usage)
+            CidModelProcessor(_add_default_gui_structure_visitor).process_cli_group(usage)
 
         if len(command.usages) == 1:
             command.gui = usage.gui_structure
@@ -251,17 +251,19 @@ def has_directory_constraint_filter(param):
 
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
+
 def process_model(model):
-    ModelProcessor({'GuiGridRow': convert_row_to_grid})
-    ModelProcessor([{'GuiSectionGroup': gui_section_group_defaults, 'Command': gui_structure_defaults, 'GuiGridRow': add_gui_grid_row_dimensions,
-                     'Parameter': parameter_description_defaults}, _convert_id_visitor]).process_model(model)
-    ModelProcessor({'GuiGrid': check_gui_grid, 'GuiSectionGroup': check_gui_section_group}).process_model(model)
+    CidModelProcessor({'GuiGridRow': convert_row_to_grid}).process_model(model)
+    CidModelProcessor({'GuiSectionGroup': gui_section_group_defaults, 'Command': gui_structure_defaults, 'GuiGridRow': add_gui_grid_row_dimensions,
+                       'Parameter': parameter_description_defaults}).process_model(model)
+    CidModelProcessor(_convert_id_visitor).process_model(model)
+    CidModelProcessor({'GuiGrid': check_gui_grid, 'GuiSectionGroup': check_gui_section_group}).process_model(model)
 
 
 def render_gui_code(model, root_command_name, dest_path):
     # EXTRACT DATA ---------------------
     model_extractor = ElementExtractor()
-    ModelProcessor(model_extractor.visitor).process_model(model)
+    CidModelProcessor(model_extractor.visitor).process_model(model)
 
     all_commands = model_extractor.all_commands
     all_parameters = model_extractor.all_parameters
@@ -332,7 +334,7 @@ def render_runner_script(dest_path, root_command_name):
         
 def is_root_command_defined(model, root_command_name):
     model_extractor = ElementExtractor()
-    ModelProcessor(model_extractor.visitor).process_model(model)
+    CidModelProcessor(model_extractor.visitor).process_model(model)
 
     return root_command_name in [command.name for command in model_extractor.all_commands]
     

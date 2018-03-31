@@ -1,14 +1,13 @@
 from functools import reduce
 import textwrap
 from collections import defaultdict
-import os
 from os.path import realpath, join, dirname, isdir, exists
 from os import makedirs
 from shutil import copy
 from jinja2 import Environment, FileSystemLoader
 
 from cid.cid_parser import parse
-from cid.utils.model_processor import ModelProcessor
+from cid.utils.cid_model_processor import CidModelProcessor
 from cid.utils.common import *
 
 
@@ -409,16 +408,16 @@ def have_sub_commands_filter(commands):
 # ------------------------------- GENERATOR FUNCTIONS -------------------------------
 
 def process_model(model):
-    ModelProcessor({'Parameter': ParameterProcessor().process_parameter}).process_model(model)
-    ModelProcessor(_usage_repr_visitor).process_model(model)
-    ModelProcessor({'Command': add_builtin_help}).process_model(model)
-    ModelProcessor({'Command': validate_command}).process_model(model)
+    CidModelProcessor({'Parameter': ParameterProcessor().process_parameter}).process_model(model)
+    CidModelProcessor(_usage_repr_visitor).process_model(model)
+    CidModelProcessor({'Command': add_builtin_help}).process_model(model)
+    CidModelProcessor({'Command': validate_command}).process_model(model)
 
 
 def render_cli_code(model, root_command_name, cli_app_path):
     # EXTRACT DATA ---------------------
     model_extractor = ElementExtractor()
-    ModelProcessor(model_extractor.visitor).process_model(model)
+    CidModelProcessor(model_extractor.visitor).process_model(model)
 
     all_commands = model_extractor.all_commands
     all_parameters = model_extractor.all_parameters
@@ -473,7 +472,7 @@ def render_runner_script(root_command_name, dest_path):
         
 def is_root_command_defined(model, root_command_name):
     model_extractor = ElementExtractor()
-    ModelProcessor(model_extractor.visitor).process_model(model)
+    CidModelProcessor(model_extractor.visitor).process_model(model)
 
     return root_command_name in [command.name for command in model_extractor.all_commands]
         
