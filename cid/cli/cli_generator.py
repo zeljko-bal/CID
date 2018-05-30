@@ -5,6 +5,7 @@ from os.path import realpath, join, dirname, isdir, exists
 from os import makedirs
 from shutil import copy
 from jinja2 import Environment, FileSystemLoader
+from textx.exceptions import TextXSemanticError
 
 from cid.cid_parser import parse
 from cid.utils.cid_model_processor import CidModelProcessor
@@ -91,11 +92,11 @@ class ParameterProcessor:
             # check for duplicate prefixes
             for prefix in parameter.prefixes:
                 if prefix in self.all_prefixes:
-                    raise Exception("Found duplicate cli prefixes for parameter: '{}'.".format(parameter.id))
+                    raise TextXSemanticError("Found duplicate cli prefixes for parameter: '{}'.".format(parameter.id))
                 self.all_prefixes.append(prefix)
         else:
             if parameter.type == 'Bool':
-                raise Exception("Found positional parameter of type 'Bool': '{}'.".format(parameter.id))
+                raise TextXSemanticError("Found positional parameter of type 'Bool': '{}'.".format(parameter.id))
 
 
 def cli_pattern_repr(pattern):
@@ -167,7 +168,7 @@ def add_builtin_help(command, parent_elements):
         command.long_help_params = ['-a', '--all']
 
     if not set(command.help_params).isdisjoint(set(command.long_help_params)):
-        raise Exception("Found same parameters in help_params and long_help_params for command: '{}'".format(command.id))
+        raise TextXSemanticError("Found same parameters in help_params and long_help_params for command: '{}'".format(command.id))
 
     resolve_builtin_help_params(command)
 
@@ -320,7 +321,7 @@ def validate_command(command):
         rightmost = rightmost_positional_elements(usage)
         for element in usage.sub_elements:
             if element_type(element) == "Parameter" and not element.nonpositional and element.multiplicity == '*' and element not in rightmost:
-                raise Exception("A positional parameter with multiplicity '*' must be the rightmost one: '{}'.".format(element.name))
+                raise TextXSemanticError("A positional parameter with multiplicity '*' must be the rightmost one: '{}'.".format(element.name))
 
 
 def rightmost_positional_elements(element):
@@ -347,7 +348,8 @@ def rightmost_positional_elements(element):
 # ------------------------------- JINJA FILTERS -------------------------------
 
 def parameter_model_filter(parameter):
-    print_list = lambda lst: str(lst) if len(lst) > 1 else "'{}'".format(lst[0])
+    def print_list(lst):
+        return str(lst) if len(lst) > 1 else "'{}'".format(lst[0])
 
     if parameter.type == 'Bool':
         positives = [p.positive for p in parameter.all_patterns if p.positive]
@@ -465,7 +467,7 @@ def render_runner_script(root_command_name, dest_path):
     env = Environment(loader=FileSystemLoader(_cli_templates_path))
     template = env.get_template('windows_cli_py_runner.template')
     rendered = template.render(command_path=join(root_command_name + '_cli', root_command_name + "_cli.py"))
-    	
+
     with open(join(dest_path, root_command_name + ".bat"), "w") as text_file:
         text_file.write(rendered)
         

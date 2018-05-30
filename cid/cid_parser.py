@@ -1,4 +1,6 @@
 from os.path import realpath, join, dirname
+
+from textx.exceptions import TextXSemanticError
 from textx.metamodel import metamodel_from_file
 
 from cid.utils.cid_model_processor import CidModelProcessor
@@ -55,20 +57,20 @@ def process_script(script):
     # check for duplicate free parameter names
     script.free_parameters = [p for p in script.elements if element_type(p) == 'Parameter']
     if contains_duplicate_names(script.free_parameters):
-        raise Exception("Found duplicate free parameter names.")
+        raise TextXSemanticError("Found duplicate free parameter names.")
 
     # check for duplicate free command names
     script.free_commands = [p for p in script.elements if element_type(p) == 'Command']
     if contains_duplicate_names(script.free_commands):
-        raise Exception("Found duplicate free command names.")
+        raise TextXSemanticError("Found duplicate free command names.")
 
     # check for duplicate import paths
     if len(script.imports) != len(set([imp.path for imp in script.imports])):
-        raise Exception("Found duplicate import paths.")
+        raise TextXSemanticError("Found duplicate import paths.")
 
     # check for duplicate import aliases
     if len(script.imports) != len(set([imp.alias for imp in script.imports])):
-        raise Exception("Found duplicate import aliases.")
+        raise TextXSemanticError("Found duplicate import aliases.")
 
 
 # -------------------------------
@@ -117,10 +119,10 @@ def process_command(command):
     # additional checks --------------
 
     if contains_duplicate_names(command.parameters):
-        raise Exception("Found parameters with duplicate names in command: '{}'".format(command.name))
+        raise TextXSemanticError("Found parameters with duplicate names in command: '{}'".format(command.name))
 
     if contains_duplicate_names(command.sub_commands):
-        raise Exception("Found sub commands with duplicate names in command: '{}'".format(command.name))
+        raise TextXSemanticError("Found sub commands with duplicate names in command: '{}'".format(command.name))
 
 
 # -------------------------------
@@ -177,27 +179,27 @@ def process_parameter(parameter):
                 else:
                     if not (len(parameter.cli_pattern_vars) == len(pattern.vars) and
                                 all([parameter.cli_pattern_vars[i] == pattern.vars[i] for i in range(0, len(pattern.vars))])):
-                        raise Exception("Different argument names found for patterns in parameter: '{}'".format(parameter.name))
+                        raise TextXSemanticError("Different argument names found for patterns in parameter: '{}'".format(parameter.name))
 
             # StringParamPattern checks
             if element_type(pattern) == "StringParamPattern":
                 if parameter.type == "Bool":
-                    raise Exception("Non boolean cli pattern in Bool type parameter: '{}'.".format(parameter.name))
+                    raise TextXSemanticError("Non boolean cli pattern in Bool type parameter: '{}'.".format(parameter.name))
                 if pattern.count_char and not parameter.type == "Num":
-                    raise Exception("Counter pattern in non Num type parameter: '{}'.".format(parameter.name))
+                    raise TextXSemanticError("Counter pattern in non Num type parameter: '{}'.".format(parameter.name))
                 if parameter.cli_pattern_count != get_cli_pattern_count(pattern):
-                    raise Exception("Different parameter count values encountered in cli patterns for parameter: '{}'".format(parameter.name))
+                    raise TextXSemanticError("Different parameter count values encountered in cli patterns for parameter: '{}'".format(parameter.name))
             elif element_type(pattern) in ['BoolWithPositivePattern', 'BoolNegativeOnlyPattern'] and not parameter.type == "Bool":
-                raise Exception("Boolean cli pattern in non Bool type parameter: '{}'.".format(parameter.name))
+                raise TextXSemanticError("Boolean cli pattern in non Bool type parameter: '{}'.".format(parameter.name))
     else:
         parameter.cli_pattern_count = 1
 
         # empty_str_allowed
         if (parameter.empty_str_allowed or parameter.empty_str_disallowed) and parameter.type != 'Str':
-            raise Exception("Found empty_str_allowed or empty_str_disallowed in non Str parameter: '{}'".format(parameter.name))
+            raise TextXSemanticError("Found empty_str_allowed or empty_str_disallowed in non Str parameter: '{}'".format(parameter.name))
 
         if parameter.default == '' and parameter.empty_str_disallowed:
-            raise Exception("Found empty_str_disallowed and default value is an empty string for parameter: '{}'.".format(parameter.name))
+            raise TextXSemanticError("Found empty_str_disallowed and default value is an empty string for parameter: '{}'.".format(parameter.name))
 
         del parameter.empty_str_disallowed
 
@@ -210,13 +212,13 @@ def process_parameter(parameter):
         parameter.multiplicity = 1
 
     if parameter.multiplicity != '*' and parameter.multiplicity <= 0:
-        raise Exception("Multiplicity must be greater than zero for: '{}'.".format(parameter.name))
+        raise TextXSemanticError("Multiplicity must be greater than zero for: '{}'.".format(parameter.name))
 
     if not parameter.nonpositional and parameter.multiplicity not in [1, '*']:
-        raise Exception("Multiplicity for positional parameters must be either 1 or '*': '{}'.".format(parameter.name))
+        raise TextXSemanticError("Multiplicity for positional parameters must be either 1 or '*': '{}'.".format(parameter.name))
 
     if not parameter.multiplicity == 1 and parameter.type == "Bool":
-        raise Exception("Multiplicity for Bool type parameters must be 1: '{}'.".format(parameter.name))
+        raise TextXSemanticError("Multiplicity for Bool type parameters must be 1: '{}'.".format(parameter.name))
 
     # help
     parameter.help = ' '.join(parameter.help.split()) # reduce excess white space
@@ -230,9 +232,9 @@ def process_parameter(parameter):
     # default
     if parameter.default_is_none:
         if parameter.type == 'Bool':
-            raise Exception("Found default_is_none and parameter type is 'Bool': '{}'".format(parameter.name))
+            raise TextXSemanticError("Found default_is_none and parameter type is 'Bool': '{}'".format(parameter.name))
         if parameter.default:
-            raise Exception("Found default_is_none and parameter has a default defined: '{}'.".format(parameter.name))
+            raise TextXSemanticError("Found default_is_none and parameter has a default defined: '{}'.".format(parameter.name))
 
     if not parameter.default:
         if parameter.default_is_none:
@@ -250,10 +252,10 @@ def process_parameter(parameter):
     if parameter.default:
         if parameter.cli_pattern_count not in [1, '*']:
             if not is_iterable(parameter.default) or len(parameter.default) != parameter.cli_pattern_count:
-                raise Exception("Parameter '{}' with {} values must have that many default values defined.".format(parameter.name, parameter.cli_pattern_count))
+                raise TextXSemanticError("Parameter '{}' with {} values must have that many default values defined.".format(parameter.name, parameter.cli_pattern_count))
         else:
             if is_iterable(parameter.default):
-                raise Exception("Parameter '{}' should only have a single default value.".format(parameter.name))
+                raise TextXSemanticError("Parameter '{}' should only have a single default value.".format(parameter.name))
     
     if parameter.default == '':
         parameter.empty_str_allowed = True
@@ -263,11 +265,11 @@ def process_parameter(parameter):
             if not isinstance(parameter.default, list):
                 parameter.default = [parameter.default] * parameter.cli_pattern_count
             elif len(parameter.default) != parameter.cli_pattern_count:
-                raise Exception("Parameter pattern count and default values count do not match: '{}'.".format(parameter.name))
+                raise TextXSemanticError("Parameter pattern count and default values count do not match: '{}'.".format(parameter.name))
 
     if parameter.type == 'Bool':
         if parameter.default and parameter.default.lower() not in ['true', 'false']:
-            raise Exception("Default value is not true or false and parameter type is 'Bool': '{}'".format(parameter.name))
+            raise TextXSemanticError("Default value is not true or false and parameter type is 'Bool': '{}'".format(parameter.name))
 
         # add parameter.none_allowed
         parameter.none_allowed = parameter.default is None or [p for p in parameter.all_patterns if p.positive] and [p for p in parameter.all_patterns if p.negative]
@@ -278,10 +280,10 @@ def process_parameter(parameter):
 
     # choices
     if parameter.choices and not parameter.type == 'Choice':
-        raise Exception("Choices found in non 'Choice' parameter: '{}'.".format(parameter.name))
+        raise TextXSemanticError("Choices found in non 'Choice' parameter: '{}'.".format(parameter.name))
 
     if parameter.type == 'Choice' and not parameter.choices:
-        raise Exception("Choices are required in 'Choice' parameter: '{}'".format(parameter.name))
+        raise TextXSemanticError("Choices are required in 'Choice' parameter: '{}'".format(parameter.name))
 
     # constraints
     for constraint in parameter.constraints:
@@ -294,7 +296,7 @@ def process_parameter(parameter):
             'File': ['FileFlagConstraint', 'CodeConstraint', 'RegexConstraint'],
         }[parameter.type]
         if element_type(constraint) not in supported_constraints:
-            raise Exception("Constraint type '{}' is unsupported for parameter type '{}': '{}'.".format(element_type(constraint), parameter.type, parameter.name))
+            raise TextXSemanticError("Constraint type '{}' is unsupported for parameter type '{}': '{}'.".format(element_type(constraint), parameter.type, parameter.name))
 
 
 # -------------------------------
@@ -433,15 +435,15 @@ def gather_usage_sub_elements(cli_element, parents):
     for group_element in cli_element.elements:
         if hasattr(group_element, 'sub_elements'):
             if not cli_element.sub_elements.isdisjoint(group_element.sub_elements) and not element_type(cli_element) == 'CliOrGroup':
-                raise Exception('Found duplicate elements in usage.')
+                raise TextXSemanticError('Found duplicate elements in usage.')
             cli_element.sub_elements.update(group_element.sub_elements)
         elif element_type(group_element) == 'Parameter':
             if group_element in cli_element.sub_elements and not element_type(cli_element) == 'CliOrGroup':
-                raise Exception("Found duplicate element '{}' in usage for command: '{}'.".format(group_element.name, [p.name for p in parents if element_type(p) == 'Command']))
+                raise TextXSemanticError("Found duplicate element '{}' in usage for command: '{}'.".format(group_element.name, [p.name for p in parents if element_type(p) == 'Command']))
             cli_element.sub_elements.add(group_element)
         elif element_type(group_element) == 'CliSeparator':
             if hasattr(cli_element, 'has_cli_separator'):
-                raise Exception('Found duplicate argument separator.')
+                raise TextXSemanticError('Found duplicate argument separator.')
             cli_element.has_cli_separator = True
 
 
@@ -460,11 +462,11 @@ def gather_gui_group_sub_elements(gui_group):
         if hasattr(element, 'sub_elements'):
             if element_type(gui_group) != 'GuiSectionGroup' or not gui_group.exclusive:
                 if not gui_group.sub_elements.isdisjoint(element.sub_elements):
-                    raise Exception("Found duplicate elements in gui structure.")
+                    raise TextXSemanticError("Found duplicate elements in gui structure.")
             gui_group.sub_elements.update(element.sub_elements)
         elif element_type(element) == 'Parameter':
             if element in gui_group.sub_elements:
-                raise Exception("Found duplicate elements in gui structure.")
+                raise TextXSemanticError("Found duplicate elements in gui structure.")
             gui_group.sub_elements.add(element)
 
 
@@ -500,12 +502,12 @@ def validate_command(command, parents):
     script = parents[0]
     for parameter in command.parameters:
         if parameter.name in [p.name for p in script.free_parameters] and not parameter in script.free_parameters:
-            raise Exception('Parameter name collision between {cmd}.{param} and a top level free parameter.'.format(
+            raise TextXSemanticError('Parameter name collision between {cmd}.{param} and a top level free parameter.'.format(
                 cmd=command.name, param=parameter.name))
 
     for sub_command in command.sub_commands:
         if sub_command.name in [c.name for c in script.free_commands] and not sub_command in script.free_commands:
-            raise Exception('Command name collision between {cmd}.{sub} and a top level free command.'.format(cmd=command.name, sub=sub_command.name))
+            raise TextXSemanticError('Command name collision between {cmd}.{sub} and a top level free command.'.format(cmd=command.name, sub=sub_command.name))
 
     parameter_declaration_check(command)
 
@@ -531,7 +533,7 @@ def parameter_declaration_check(command):
         declared_names = [p.name for p in command.parameters]
         for element in command.gui.sub_elements:
             if element.name not in declared_names:
-                raise Exception('Undeclared parameter: {param} in command gui struture: {cmd}.'.format(param=element.name, cmd=command.name))
+                raise TextXSemanticError('Undeclared parameter: {param} in command gui struture: {cmd}.'.format(param=element.name, cmd=command.name))
 
     usage_sub_elements = set()
     for usage in command.usages:
@@ -540,7 +542,7 @@ def parameter_declaration_check(command):
     declared_names = [p.name for p in command.parameters]
     for element in usage_sub_elements:
         if element.name not in declared_names:
-            raise Exception('Undeclared parameter: {param} in command: {cmd}.'.format(param=element.name, cmd=command.name))
+            raise TextXSemanticError('Undeclared parameter: {param} in command: {cmd}.'.format(param=element.name, cmd=command.name))
 
     all_sub_elements = usage_sub_elements
     if command.gui:
@@ -567,7 +569,7 @@ def parse(script_path):
         'Command': process_command,
         'Parameter': process_parameter,
         'CliOrGroup': process_cli_or_group,
-        'RegexConstraint':process_regex_constraint,
+        'RegexConstraint': process_regex_constraint,
     })
 
     model = metamodel.model_from_file(script_path)

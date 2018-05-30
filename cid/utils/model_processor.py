@@ -1,8 +1,7 @@
-from functools import wraps, reduce
+from functools import wraps
 from inspect import getfullargspec
 from types import MethodType, BuiltinMethodType
 from contextlib import contextmanager
-from cid.utils.common import *
 
 
 class ModelProcessor:
@@ -11,6 +10,9 @@ class ModelProcessor:
         self.allow_revisiting = allow_revisiting
         self.parent_stack = []
         self.visited = []
+
+    def element_type_name(self, element):
+        raise NotImplementedError('ModelProcessor.element_type_name not implemented in derived class.')
 
     @contextmanager
     def parent(self, model):
@@ -22,7 +24,7 @@ class ModelProcessor:
         if not self.allow_revisiting and element in self.visited:
             return
 
-        callback = self.callbacks.get(element_type(element))
+        callback = self.callbacks.get(self.element_type_name(element))
         if callback:
             args_count = len(getfullargspec(callback).args)
             if isinstance(callback, (MethodType, BuiltinMethodType)):

@@ -3,6 +3,9 @@ from cid.utils.model_processor import ModelProcessor
 
 
 class CidModelProcessor(ModelProcessor):
+    def element_type_name(self, element):
+        return element_type(element)
+
     @ModelProcessor.depth_first
     def process_model(self, model):
         for import_statement in model.imports:
@@ -19,8 +22,6 @@ class CidModelProcessor(ModelProcessor):
             self.invoke(choice)
         if parameter.cli:
             if parameter.cli.cli_pattern:
-                self.invoke(parameter.cli.cli_pattern)
-            elif parameter.cli.code_block:
                 self.invoke(parameter.cli.cli_pattern)
         for cli_alias in parameter.cli_aliases:
             self.invoke(cli_alias)
