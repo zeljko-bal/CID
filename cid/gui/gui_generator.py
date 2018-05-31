@@ -2,6 +2,7 @@ from os.path import join, dirname, realpath, isdir
 from shutil import rmtree, copytree
 from collections import defaultdict, namedtuple
 from jinja2 import Environment, FileSystemLoader
+from textx.exceptions import TextXSemanticError
 
 from cid.cid_parser import parse
 from cid.utils.cid_model_processor import CidModelProcessor
@@ -170,7 +171,7 @@ def check_gui_grid(grid):
     row_length = None
     for row in grid.elements:
         if row_length and row_length != len(row.elements):
-            raise Exception("Inconsistent row length in gui grid for command: '{}'".format(parent_command(grid).id))
+            raise TextXSemanticError("Inconsistent row length in gui grid for command: '{}'".format(parent_command(grid).id))
         else:
             row_length = len(row.elements)
 
@@ -183,13 +184,13 @@ def check_gui_section_group(section_group):
     for section in section_group.elements:
         if section.expanded:
             if found_expanded:
-                raise Exception("Two expanded sections in gui section group for command: '{}'".format(parent_command(section_group).id))
+                raise TextXSemanticError("Two expanded sections in gui section group for command: '{}'".format(parent_command(section_group).id))
             elif section.expanded:
                 found_expanded = True
 
     # check for optional sections
     if any([section.optional for section in section_group.elements]):
-        raise Exception("Optional section in section group for command: '{}'.".format(parent_command(section_group).id))
+        raise TextXSemanticError("Optional section in section group for command: '{}'.".format(parent_command(section_group).id))
 
 
 # ------------------------------- JINJA FILTERS -------------------------------

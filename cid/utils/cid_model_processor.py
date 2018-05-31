@@ -1,12 +1,12 @@
 from cid.utils.common import element_type
-from cid.utils.model_processor import ModelProcessor
+from cid.utils.model_processor import ModelProcessor, self_last_with_parent
 
 
 class CidModelProcessor(ModelProcessor):
     def element_type_name(self, element):
         return element_type(element)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_model(self, model):
         for import_statement in model.imports:
             self.invoke(import_statement)
@@ -16,7 +16,7 @@ class CidModelProcessor(ModelProcessor):
             elif element_type(element) == 'Command':
                 self.process_command(element)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_parameter(self, parameter):
         for choice in parameter.choices:
             self.invoke(choice)
@@ -28,7 +28,7 @@ class CidModelProcessor(ModelProcessor):
         for constraint in parameter.constraints:
             self.invoke(constraint)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_command(self, command):
         for parameter in command.parameters:
             if element_type(parameter) == 'Parameter':
@@ -47,7 +47,7 @@ class CidModelProcessor(ModelProcessor):
         if command.gui:
             self.process_gui_structure(command.gui)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_cli_group(self, group):
         for element in group.elements:
             if hasattr(element, 'elements'):
@@ -55,12 +55,12 @@ class CidModelProcessor(ModelProcessor):
             else:
                 self.invoke(element)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_gui_structure(self, gui_structure):
         for element in gui_structure.elements:
             self.process_gui_element(element)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_gui_element(self, gui_element):
         if element_type(gui_element) == 'GuiTabs':
             for tab in gui_element.elements:
@@ -80,7 +80,7 @@ class CidModelProcessor(ModelProcessor):
         elif element_type(gui_element) == 'ParameterReference':
             self.invoke(gui_element)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_gui_grid_row(self, gui_grid_row):
         for element in gui_grid_row.elements:
             if element_type(element) == 'Parameter':
@@ -88,6 +88,6 @@ class CidModelProcessor(ModelProcessor):
             elif element_type(element) == 'ParameterReference':
                 self.invoke(element)
 
-    @ModelProcessor.depth_first
+    @self_last_with_parent
     def process_gui_tab(self, gui_tab):
         self.process_gui_structure(gui_tab.body)

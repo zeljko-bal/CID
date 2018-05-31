@@ -36,37 +36,37 @@ class ModelProcessor:
 
             self.visited.append(element)
 
-    @staticmethod
-    def depth_first(func):
-        return ModelProcessor.process_self_last(ModelProcessor.with_parent(func))
 
-    @staticmethod
-    def breadth_first(func):
-        return ModelProcessor.process_self_first(ModelProcessor.with_parent(func))
+def self_first_with_parent(func):
+    return self_first(with_parent(func))
 
-    @staticmethod
-    def with_parent(func):
-        @wraps(func)
-        def wrapper(self, node):
-            with self.parent(node):
-                func(self, node)
 
-        return wrapper
+def self_last_with_parent(func):
+    return self_last(with_parent(func))
 
-    @staticmethod
-    def process_self_first(func):
-        @wraps(func)
-        def wrapper(self, node):
-            self.invoke(node)
+
+def with_parent(func):
+    @wraps(func)
+    def wrapper(self: ModelProcessor, node):
+        with self.parent(node):
             func(self, node)
 
-        return wrapper
+    return wrapper
 
-    @staticmethod
-    def process_self_last(func):
-        @wraps(func)
-        def wrapper(self, node):
-            func(self, node)
-            self.invoke(node)
 
-        return wrapper
+def self_first(func):
+    @wraps(func)
+    def wrapper(self: ModelProcessor, node):
+        self.invoke(node)
+        func(self, node)
+
+    return wrapper
+
+
+def self_last(func):
+    @wraps(func)
+    def wrapper(self: ModelProcessor, node):
+        func(self, node)
+        self.invoke(node)
+
+    return wrapper
