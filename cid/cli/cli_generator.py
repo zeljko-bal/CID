@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from textx.exceptions import TextXSemanticError
 
 from cid.cid_parser import parse
+from cid.cli.cli_model_specs import CliModelSpecs
 from cid.utils.cid_model_processor import CidModelProcessor
 from cid.utils.common import *
 
@@ -28,7 +29,7 @@ class ParameterProcessor:
         self.check(parameter)
 
     def transform(self, parameter):
-        # fill parameter.prefixes, parameter.pos_prefixes, parameter.neg_prefixes, parameter.all_patterns
+        # fill parameter.prefixes, parameter.pos_prefixes, parameter.neg_prefixes
         if parameter.nonpositional:
             str_patterns = [p for p in parameter.all_patterns if element_type(p) == 'StringParamPattern']
             pos_patterns = [p for p in parameter.all_patterns if
@@ -209,7 +210,7 @@ def generate_usage_help(command, parents, long=False):
 def generate_parameters_usage_help(command, long, command_str):
     rows = []
     # col_length = 0
-    desc_col_width = 50  # TODO config za width
+    desc_col_width = 50  # TODO config for width or dynamic width
 
     parameters = reduce(lambda x, y: x.union(y), [u.sub_elements for u in command.usages])
 
@@ -481,12 +482,20 @@ def is_root_command_defined(model, root_command_name):
         
 def generate_cli(cid_file, root_command_name, dest_path):
     cli_app_path = join(dest_path, root_command_name + "_cli")
+
     model = parse(cid_file)
+
     if not is_root_command_defined(model, root_command_name):
         print("Error: The specified root command is not defined.")
         return
+
     process_model(model)
+
+    CidModelProcessor(CliModelSpecs().visitor).process_model(model)
+
     copy_framework(cli_app_path)
+
     render_cli_code(model, root_command_name, cli_app_path)
     render_runner_script(root_command_name, dest_path)
+
     print("Generated cli successfully.")

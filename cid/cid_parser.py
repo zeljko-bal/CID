@@ -3,15 +3,17 @@ from os.path import realpath, join, dirname
 from textx.exceptions import TextXSemanticError
 from textx.metamodel import metamodel_from_file
 
+from cid.cid_model_specs import CidModelSpecs
 from cid.utils.cid_model_processor import CidModelProcessor
 from cid.utils.reference_resolver import ReferenceResolver, ImportedReferenceDefinition
 from cid.utils.common import *
 
 
 class CliOptionalGroup:
-    def __init__(self, parent, elements):
+    def __init__(self, parent, elements, sub_elements):
         self.parent = parent
         self.elements = elements
+        self.sub_elements = sub_elements
 
 
 class CliStructure:
@@ -20,6 +22,7 @@ class CliStructure:
         self.elements = elements
         self.has_options = has_options
         self.has_subcommand = has_subcommand
+        self.sub_elements = set()
         
  
 class ParameterCliValue:
@@ -55,12 +58,12 @@ def import_reference_path(ref):
 
 def process_script(script):
     # check for duplicate free parameter names
-    script.free_parameters = [p for p in script.elements if element_type(p) == 'Parameter']
+    script.free_parameters = [parameter for parameter in script.elements if element_type(parameter) == 'Parameter']
     if contains_duplicate_names(script.free_parameters):
         raise TextXSemanticError("Found duplicate free parameter names.")
 
     # check for duplicate free command names
-    script.free_commands = [p for p in script.elements if element_type(p) == 'Command']
+    script.free_commands = [command for command in script.elements if element_type(command) == 'Command']
     if contains_duplicate_names(script.free_commands):
         raise TextXSemanticError("Found duplicate free command names.")
 
@@ -103,10 +106,10 @@ def process_command(command):
         command.usages = [usage.body for usage in command.usages]
     elif command.usage:
         command.usages = [command.usage]
-        del command.usage
-        
-    command.description = ' '.join(command.description.split()) # reduce excess white space
-    command.help = ' '.join(command.help.split()) # reduce excess white space
+    del command.usage
+
+    command.description = ' '.join(command.description.split())  # reduce excess white space
+    command.help = ' '.join(command.help.split())  # reduce excess white space
     
     # defaults --------------
 
@@ -221,10 +224,10 @@ def process_parameter(parameter):
         raise TextXSemanticError("Multiplicity for Bool type parameters must be 1: '{}'.".format(parameter.name))
 
     # help
-    parameter.help = ' '.join(parameter.help.split()) # reduce excess white space
+    parameter.help = ' '.join(parameter.help.split())  # reduce excess white space
         
     # description
-    parameter.description = ' '.join(parameter.description.split()) # reduce excess white space
+    parameter.description = ' '.join(parameter.description.split())  # reduce excess white space
     
     if not parameter.description:
         parameter.description = '{default_desc}'
@@ -317,13 +320,7 @@ def process_cli_or_group(or_group):
     # check for CliOptionalGroup in CliOrGroup
     for element in or_group.elements:
         if element_type(element) == 'CliOptionalGroup':
-            print('warning: CliOptionalGroup in or_group')
-            
-            
-# -------------------------------
-            
-def process_regex_constraint(regex_constraint):
-    regex_constraint.value = regex_constraint.value[1:-1]
+            print('warning: CliOptionalGroup in CliOrGroup')
 
 
 # ------------------------------- SECOND PASS -------------------------------
@@ -333,14 +330,10 @@ def process_cli_separator(cli_separator):
     cli_separator.usage_repr = cli_separator.value
 
     # fill cmd.cli_separators
-    cmd = parent_command(cli_separator)
-    add_cli_separator_attr(cmd)
-    cmd.cli_separators.append(cli_separator.value)
-
-
-def add_cli_separator_attr(command):
+    command = parent_command(cli_separator)
     if not hasattr(command, 'cli_separators'):
         command.cli_separators = []
+    command.cli_separators.append(cli_separator.value)
 
 
 # -------------------------------
@@ -353,8 +346,12 @@ def add_id(element):
 
 def set_usage_defaults(command):
     if not command.usages:
-        default_usage = CliStructure(command, sorted([p for p in command.parameters if not p.nonpositional], key=lambda p: 0 if p.multiplicity != '*' else 1),
-                                     has_options=True, has_subcommand=False)
+        default_usage = CliStructure(
+            command,
+            sorted([parameter for parameter in command.parameters if not parameter.nonpositional],
+                   key=lambda parameter: 0 if parameter.multiplicity != '*' else 1),
+            has_options=True,
+            has_subcommand=False)
         command.usages = [default_usage]
 
     if command.sub_commands and all([not usage.has_subcommand for usage in command.usages]):
@@ -482,7 +479,6 @@ _gather_gui_sub_elements_visitor = {
     'GuiGrid': gather_gui_group_sub_elements,
     'GuiTab': gather_gui_element_sub_elements,
     'GuiGridRow': gather_gui_group_sub_elements,
-    'GuiGridCell': gather_gui_element_sub_elements,
 }
 
 
@@ -491,8 +487,8 @@ _gather_gui_sub_elements_visitor = {
 def expand_options_shortcut(command):
     for usage in command.usages:
         if usage.has_options:
-            options = [p for p in command.parameters if p.nonpositional and p not in usage.sub_elements]
-            usage.elements = [CliOptionalGroup(usage, [p]) for p in options] + usage.elements
+            options = [parameter for parameter in command.parameters if parameter.nonpositional and parameter not in usage.sub_elements]
+            usage.elements = [CliOptionalGroup(usage, [parameter], [parameter]) for parameter in options] + usage.elements
             usage.sub_elements = set(options).union(usage.sub_elements)
 
 
@@ -569,7 +565,6 @@ def parse(script_path):
         'Command': process_command,
         'Parameter': process_parameter,
         'CliOrGroup': process_cli_or_group,
-        'RegexConstraint': process_regex_constraint,
     })
 
     model = metamodel.model_from_file(script_path)
@@ -598,7 +593,7 @@ def parse(script_path):
 
     # SECOND PASS ---------------------
 
-    CidModelProcessor({'CliSeparator': process_cli_separator, 'Command': add_cli_separator_attr}).process_model(model)
+    CidModelProcessor({'CliSeparator': process_cli_separator}).process_model(model)
     CidModelProcessor({'Command': add_id, 'Parameter': add_id}).process_model(model)
     CidModelProcessor({'Command': set_usage_defaults}).process_model(model)
     CidModelProcessor(_constraint_message_defaults_visitor).process_model(model)
@@ -606,5 +601,7 @@ def parse(script_path):
     CidModelProcessor(_gather_gui_sub_elements_visitor).process_model(model)
     CidModelProcessor({'Command': expand_options_shortcut}).process_model(model)
     CidModelProcessor({'Command': validate_command}).process_model(model)
+
+    CidModelProcessor(CidModelSpecs().visitor).process_model(model)
     
     return model

@@ -185,12 +185,12 @@ FileFlagConstraint:
 
 RegexConstraint:
   'regex' ':'
-    value=RegexConstraintValue
+    '/' value=RegexConstraintValue '/'
     (message=STRING)?
 ;
 
 RegexConstraintValue:
-  /\/.*\//
+  /.*?(?=\/\s)/
 ;
 
 CodeConstraint:

@@ -5,6 +5,7 @@ from jinja2 import Environment, FileSystemLoader
 from textx.exceptions import TextXSemanticError
 
 from cid.cid_parser import parse
+from cid.gui.gui_model_specs import GuiModelSpecs
 from cid.utils.cid_model_processor import CidModelProcessor
 from cid.utils.common import *
 
@@ -345,10 +346,16 @@ def generate_gui(cid_file, root_command_name, dest_path):
     if not is_root_command_defined(model, root_command_name):
         print("Error: The specified root command is not defined.")
         return
+
     process_model(model)
+
+    CidModelProcessor(GuiModelSpecs().visitor).process_model(model)
+
     copy_framework(dest_path, root_command_name)
+
     render_gui_code(model, root_command_name, dest_path)
     render_runner_script(dest_path, root_command_name)
+
     print("Generated gui successfully.")
 
 if __name__ == '__main__':

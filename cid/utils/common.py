@@ -1,6 +1,6 @@
 
 def element_type(element):
-    return element.__class__.__name__
+    return type(element).__name__
 
 
 def parent_command(element):
