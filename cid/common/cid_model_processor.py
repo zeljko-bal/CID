@@ -1,5 +1,5 @@
-from cid.utils.common import element_type
-from cid.utils.model_processor import ModelProcessor, self_last_with_parent
+from cid.common.utils import element_type
+from cid.common.model_processor import ModelProcessor, self_last_with_parent
 
 
 class CidModelProcessor(ModelProcessor):

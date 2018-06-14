@@ -1,4 +1,4 @@
-from cid.utils.model_specs import spec, ModelSpecs, SpecModelNode
+from cid.common.model_specs import spec, ModelSpecs, SpecModelNode
 
 
 class GuiModelSpecs(ModelSpecs):

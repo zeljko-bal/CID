@@ -1,4 +1,4 @@
-from cid.utils.model_specs import ModelSpecs, spec, SpecModelNode
+from cid.common.model_specs import ModelSpecs, spec, SpecModelNode
 
 
 class CliModelSpecs(ModelSpecs):

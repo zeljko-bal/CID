@@ -1,5 +1,5 @@
-from cid.utils.common import parent_command
-from cid.utils.model_specs import ModelSpecs, spec, SpecModelNode
+from cid.common.utils import parent_command
+from cid.common.model_specs import ModelSpecs, spec, SpecModelNode
 
 
 class CidModelSpecs(ModelSpecs):

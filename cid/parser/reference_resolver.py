@@ -1,4 +1,4 @@
-from cid.utils.common import *
+from cid.common.utils import *
 
 
 class ImportedReferenceDefinition:
