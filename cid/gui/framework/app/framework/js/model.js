@@ -293,8 +293,8 @@ class OrGroup
 		
 		let impossible_groups_idxs = [];
 		let possible_groups_idxs = [...sub_group_results.keys()];
-		
-		// ako postoji u matched neki koji uopste ne postoji u nekoj od drugih ta druga je impossible, 
+
+		// if a param exists in matched and doesn't exist at all in another group, that other group is impossible
 		sub_group_results
 			.forEach((sub_group_result, group_idx) => 
 			{
@@ -305,18 +305,18 @@ class OrGroup
 						{
 							// if other group is impossible or it is this group
 							if (impossible_groups_idxs.includes(other_group_idx) || other_group_idx == group_idx)
-								return; // continue;
+								return;
 							
 							if(!param_ids(other_sub_group_result.all).includes(matched_param_id))
 							{
-								possible_groups_idxs.splice(possible_groups_idxs.indexOf(other_group_idx), 1); // romove from possible_groups_idxs
+								possible_groups_idxs.splice(possible_groups_idxs.indexOf(other_group_idx), 1); // remove from possible_groups_idxs
 								impossible_groups_idxs.push(other_group_idx); // add to impossible_groups_idxs
 							}
 						});
 				}
 			});
-		
-		// svi iz impossible grupa (iskljucujuci matched) koji nisu u possible grupama idu u disabled
+
+		// all from the impossible groups (excluding matched) that aren't in possible groups are disabled
 		for(let impossible_idx of impossible_groups_idxs)
 		{
 			let impossible_group = sub_group_results[impossible_idx];
@@ -342,15 +342,15 @@ class OrGroup
 				}
 			}
 		}
-		
-		// ako je ostala samo jedna possible grupa njeni required idu u required
+
+		// if there is only one possible group left, it's required params are required
 		if(possible_groups_idxs.length == 1)
 		{
 			const only_possible_group = sub_group_results[possible_groups_idxs[0]];
 			
 			group_result.required.push(...only_possible_group.required);
 		}
-		else // ako ih ima vise oni koji su svuda required idu u required, ostali required idu u possibly_required
+		else // if there are more possible groups, those that are required in all of them are required, the rest are possibly_required
 		{
 			for(let possible_group_idx of possible_groups_idxs)
 			{
@@ -360,7 +360,7 @@ class OrGroup
 			}
 		}
 		
-		// ostali idu u same sebe
+		// other params stay in their categories
 		for(let possible_group_idx of possible_groups_idxs)
 		{
 			const possible_group = sub_group_results[possible_group_idx];
