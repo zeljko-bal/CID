@@ -181,4 +181,8 @@ div.material-tooltip
 	content:'*';
 	color: #21ecff;
 }
-	
+
+label:after
+{
+    width: 30vw;
+}
