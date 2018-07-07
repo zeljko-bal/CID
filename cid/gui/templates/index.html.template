@@ -365,6 +365,7 @@ new ParameterUsage(parameter_models['{{element.id}}'])
 <!-- Automatically generated code. Do not edit directly. -->
 <html>
     <head>
+		<title>{{(commands|selectattr("id", "equalto", root_command_id)|first).title}}</title>
 		<!--Import Google Icon Font-->
 		<link rel="stylesheet" href="lib/materialize/css/material-icons.css">
 		<!--Import materialize.css-->
